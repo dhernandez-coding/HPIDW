@@ -1,0 +1,25 @@
+CREATE TABLE [rpt].[MetricValues] (
+    [MetricValueID] INT IDENTITY(1,1) NOT NULL,
+    [MetricID] INT NOT NULL,
+    [MetricValueDate] DATE NULL,
+    [DataSourceID] INT NULL,
+    [LocationID] VARCHAR(50) NULL,
+    [DepartmentID] VARCHAR(50) NULL,
+    [ProviderID] VARCHAR(50) NULL,
+    [PracticeID] VARCHAR(50) NULL,
+    [PayerID] VARCHAR(50) NULL,
+    [ServiceLine] VARCHAR(50) NULL,
+    [ReportGroup1] VARCHAR(200) NULL,
+    [ReportGroup2] VARCHAR(200) NULL,
+    [ReportGroup3] VARCHAR(200) NULL,
+    [ReportGroup4] VARCHAR(200) NULL,
+    [ReportGroup5] VARCHAR(200) NULL,
+    [ReportGroup6] VARCHAR(200) NULL,
+    [ReportGroup7] VARCHAR(200) NULL,
+    [MetricValueNumerator] DECIMAL(18,2) NULL,
+    [MetricValueDenominator] DECIMAL(18,2) NULL,
+    [MetricValue] DECIMAL(18,2) NULL,
+    [UpdateDatetime] DATETIME NULL,
+    CONSTRAINT [PK__MetricVa__A16C2C29198D09B9] PRIMARY KEY ([MetricValueID])
+);
+GO

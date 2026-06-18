@@ -1,0 +1,26 @@
+CREATE TABLE [stg].[ModMed_PatientStatements] (
+    [patient_statement_id] VARCHAR(50) NULL,
+    [patient_id] VARCHAR(50) NULL,
+    [firm_id] VARCHAR(50) NULL,
+    [business_unit_id] VARCHAR(50) NULL,
+    [statement_date] DATETIME NULL,
+    [statement_number] VARCHAR(50) NULL,
+    [status] VARCHAR(100) NULL,
+    [note] VARCHAR(MAX) NULL,
+    [total_insurance_due] DECIMAL(18,2) NULL,
+    [total_patient_due] DECIMAL(18,2) NULL,
+    [version] INT NULL,
+    [oldest_aging_balance] VARCHAR(50) NULL,
+    [has_aging_balance_120_plus] BIT NULL,
+    [has_aging_balance_30_60] BIT NULL,
+    [has_aging_balance_60_90] BIT NULL,
+    [has_aging_balance_90_120] BIT NULL,
+    [has_aging_balance_current] BIT NULL,
+    [firm_global_id] VARCHAR(50) NULL,
+    [LoadDateTime] DATETIME NULL DEFAULT (getdate()),
+    [charge_link_key] VARCHAR(50) NULL,
+    [service_date] DATETIME NULL,
+    [patient_statement_charge_id] VARCHAR(50) NULL,
+    [is_latest_statement] BIT NULL
+);
+GO

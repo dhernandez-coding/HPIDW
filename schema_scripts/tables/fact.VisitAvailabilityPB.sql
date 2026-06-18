@@ -1,0 +1,25 @@
+CREATE TABLE [fact].[VisitAvailabilityPB] (
+    [VisitAvailabilityID] VARCHAR(100) NOT NULL,
+    [VisitAvailabilityVisitID] VARCHAR(50) NULL,
+    [VisitAvailabilityDataSourceID] INT NULL,
+    [VisitAvailabilityDate] DATETIME NULL,
+    [VisitAvailabilityPatientID] VARCHAR(50) NULL,
+    [VisitAvailabilityDepartmentID] VARCHAR(50) NULL,
+    [VisitAvailabilitySpecialty] VARCHAR(50) NULL,
+    [VisitAvailabilityLocationID] VARCHAR(50) NULL,
+    [VisitAvailabilityProviderID] VARCHAR(50) NULL,
+    [VisitAvailabilityAppointmentFlag] INT NULL,
+    [VisitAvailabilityType] VARCHAR(50) NULL,
+    [VisitAvailabilityUnavailable] VARCHAR(10) NULL,
+    [VisitAvailabilityUnavailableReason] VARCHAR(50) NULL,
+    [VisitAvailabilityOutsideTemplate] VARCHAR(10) NULL,
+    [VisitAvailabilityOverbook] VARCHAR(10) NULL,
+    [VisitAvailabilityRegularOpening] INT NULL,
+    [VisitAvailabilityOverbookOpening] INT NULL,
+    [VisitAvailabilitySlotLength] INT NULL,
+    [VisitAvailabilityBeginTime] DATETIME NULL,
+    [VisitAvailabilityEndTime] DATETIME NULL,
+    [VisitAvailabilityUpdateDate] DATETIME NULL,
+    CONSTRAINT [PK__VisitAvailabilityPB__4D3AA1BE992C7FF3] PRIMARY KEY ([VisitAvailabilityID])
+);
+GO

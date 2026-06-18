@@ -1,0 +1,25 @@
+CREATE TABLE [map].[zTEST_PracticeProviders] (
+    [PracticeProviderID] VARCHAR(100) NOT NULL,
+    [PracticeID] VARCHAR(100) NULL,
+    [ProviderID] VARCHAR(100) NULL,
+    [PracticeProviderIsDefaultPractice] BIT NULL,
+    [PracticeProviderIsDefaultReferralPractice] BIT NULL,
+    [PracticeProviderIsPrimary] BIT NULL,
+    [PracticeProviderIsSpecialist] BIT NULL,
+    [PracticeProviderIsMidLevel] BIT NULL,
+    [PracticeProviderIsReferralTarget] BIT NULL,
+    [PracticeProviderIsAffiliate] BIT NULL,
+    [PracticeProviderEffectiveDate] DATE NULL,
+    [PracticeProviderEndDate] DATE NULL,
+    [PracticeProviderFTE] DECIMAL(18,2) NULL,
+    [PracticeProviderAllocationPercent] DECIMAL(18,8) NULL,
+    [PracticeProviderLocation] VARCHAR(50) NULL,
+    [PracticeProviderGLType] VARCHAR(30) NULL,
+    [PracticeProviderGLTypeID] VARCHAR(30) NULL,
+    [PracticeProviderGLProviderID] VARCHAR(10) NULL,
+    [PracticeProviderDHSType] INT NULL,
+    [PracticeProviderIsActive] BIT NULL,
+    [PracticeProviderUpdatedDatetime] DATETIME NULL,
+    CONSTRAINT [PK__zTEST_Pr__5E7F77EE62C405C5] PRIMARY KEY ([PracticeProviderID])
+);
+GO

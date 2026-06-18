@@ -1,0 +1,28 @@
+CREATE TABLE [map].[Providers] (
+    [PracticeProviderID] INT NULL,
+    [PracticeID] VARCHAR(100) NULL,
+    [EpicPracticeProviderID] INT NULL,
+    [ProviderID] VARCHAR(100) NULL,
+    [IsReferralTarget] BIT NULL,
+    [IsHPIPrimaryCare] BIT NULL,
+    [IsHPISpecialist] BIT NULL,
+    [IsAffiliate] BIT NULL,
+    [EpicPracticeProviderUpdatedDatetime] DATETIME NULL,
+    [ProviderAbbreviation] VARCHAR(100) NULL,
+    [PracticeProviderIsPrimary] BIT NULL,
+    [PracticeProviderEffectiveDate] DATE NULL,
+    [PracticeProviderEndDate] DATE NULL,
+    [PracticeProviderIsActive] BIT NULL,
+    [PracticeProviderUpdatedDatetime] DATETIME NULL,
+    [PracticeProviderFTE] DECIMAL(18,0) NULL,
+    [PracticeProviderAllocationPercent] DECIMAL(18,0) NULL,
+    [PracticeProviderLocation] VARCHAR(50) NULL,
+    [PracticeProviderIsSpecialist] BIT NULL,
+    [PracticeProviderIsMidLevel] BIT NULL,
+    [PracticeProviderGLType] VARCHAR(30) NULL,
+    [PracticeProviderGLTypeID] VARCHAR(30) NULL,
+    [PracticeProviderGLProviderID] VARCHAR(10) NULL,
+    [PracticeProviderDHSType] INT NULL,
+    [TableSource] INT NOT NULL
+);
+GO

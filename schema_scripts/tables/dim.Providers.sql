@@ -1,0 +1,25 @@
+CREATE TABLE [dim].[Providers] (
+    [ProviderID] VARCHAR(50) NOT NULL,
+    [ProviderDataSourceID] INT NOT NULL,
+    [ProviderSourceID] VARCHAR(50) NOT NULL,
+    [ProviderAbbreviation] VARCHAR(50) NULL,
+    [ProviderFirstName] VARCHAR(100) NULL,
+    [ProviderMiddleInitial] VARCHAR(50) NULL,
+    [ProviderLastName] VARCHAR(100) NULL,
+    [ProviderGender] VARCHAR(50) NULL,
+    [ProviderSuffix] VARCHAR(50) NULL,
+    [ProviderStreetAddress1] VARCHAR(100) NULL,
+    [ProviderStreetAddress2] VARCHAR(100) NULL,
+    [ProviderCity] VARCHAR(50) NULL,
+    [ProviderState] VARCHAR(50) NULL,
+    [ProviderZipCode] VARCHAR(50) NULL,
+    [ProviderPhone] VARCHAR(50) NULL,
+    [ProviderFax] VARCHAR(50) NULL,
+    [ProviderSpecialtyID] VARCHAR(50) NULL,
+    [ProviderUPIN] VARCHAR(50) NULL,
+    [ProviderNPI] VARCHAR(50) NULL,
+    [ProviderIsActive] BIT NULL,
+    [ProviderUpdatedDateTime] DATETIME NULL,
+    CONSTRAINT [PK_Provider] PRIMARY KEY ([ProviderID])
+);
+GO

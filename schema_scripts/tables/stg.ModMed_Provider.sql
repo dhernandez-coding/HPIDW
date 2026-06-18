@@ -1,0 +1,26 @@
+CREATE TABLE [stg].[ModMed_Provider] (
+    [staff_id] VARCHAR(100) NULL,
+    [firm_id] VARCHAR(100) NULL,
+    [primary_facility_id] VARCHAR(100) NULL,
+    [supervisor_id] VARCHAR(100) NULL,
+    [universal_identifier] VARCHAR(200) NULL,
+    [last_name] VARCHAR(200) NULL,
+    [first_name] VARCHAR(200) NULL,
+    [middle_name] VARCHAR(200) NULL,
+    [prefix] VARCHAR(100) NULL,
+    [suffix] VARCHAR(100) NULL,
+    [nick_name] VARCHAR(200) NULL,
+    [username] VARCHAR(200) NULL,
+    [role] VARCHAR(200) NULL,
+    [title] VARCHAR(200) NULL,
+    [professional_designation] VARCHAR(200) NULL,
+    [other_designation] VARCHAR(200) NULL,
+    [email] VARCHAR(300) NULL,
+    [date_of_birth] DATETIME2 NULL,
+    [billing_id_qualifier] VARCHAR(100) NULL,
+    [billing_provider_id] VARCHAR(200) NULL,
+    [npi] VARCHAR(50) NULL,
+    [dea_number] VARCHAR(100) NULL,
+    [firm_global_id] VARCHAR(100) NULL
+);
+GO
