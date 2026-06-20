@@ -15,6 +15,7 @@ CREATE TABLE [stg].[THPTransactions] (
     [Credit] DECIMAL(18,2) NULL,
     [Original_Amount] DECIMAL(18,2) NULL,
     [Practice] NVARCHAR(50) NULL,
-    [UpdateDateTime] DATETIME NULL
+    [UpdateDateTime] DATETIME NULL,
+    [Provider] NVARCHAR(255) NULL
 );
 GO
