@@ -93,7 +93,8 @@
     VisitCaseBMI FLOAT NULL,
     VisitCasePrimaryScheduledProcedure VARCHAR(MAX) NULL,
     VisitCaseLaterality VARCHAR(200) NULL,
-    VisitCaseEmergencyStatus VARCHAR(200) NULL);
+    VisitCaseEmergencyStatus VARCHAR(200) NULL,
+	VisitCaseDelayReason VARCHAR(MAX) NULL);
 
 
 	-- Step 2: Create the temp table for laterality
@@ -193,6 +194,7 @@
 	  ,[VisitCasePrimaryScheduledProcedure]
 	  ,[VisitCaseLaterality]
 	  ,[VisitCaseEmergencyStatus]
+	  ,[VisitCaseDelayReason]
 
 	)
 	select
@@ -272,7 +274,7 @@
 		,cp.PROC_DISPLAY_NAME as  VisitCasePrimaryScheduledProcedure
 		,l.Lateralities as VisitCaseLaterality
 		,orl.EMERG_STATUS_YN as VisitCaseEmergencyStatus
-
+		,rt.DELAY_REASON_NM AS VisitCaseDelayReason
 	--select distinct op.PROC_NAME
 	from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].OR_CASE orc
 		left join [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].or_log orl on orc.or_case_id = orl.log_id
@@ -386,6 +388,7 @@
 	  ,[VisitCasePrimaryScheduledProcedure]
 	  ,[VisitCaseLaterality]
 	  ,[VisitCaseEmergencyStatus]
+	  ,[VisitCaseDelayReason]
 	  )
 	  SELECT
 	  [VisitCaseID]
@@ -461,6 +464,7 @@
 	  ,[VisitCasePrimaryScheduledProcedure]
 	  ,[VisitCaseLaterality]
 	  ,[VisitCaseEmergencyStatus]
+	  ,[VisitCaseDelayReason]
 	  FROM @StagingTable;
 	  END
    ELSE

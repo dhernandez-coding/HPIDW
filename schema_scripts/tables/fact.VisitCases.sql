@@ -72,6 +72,7 @@ CREATE TABLE [fact].[VisitCases] (
     [VisitCasePrimaryScheduledProcedure] VARCHAR(MAX) NULL,
     [VisitCaseLaterality] VARCHAR(200) NULL,
     [VisitCaseEmergencyStatus] VARCHAR(200) NULL,
+    [VisitCaseDelayReason] VARCHAR(MAX) NULL,
     CONSTRAINT [PK__VisitCases__4D3AA1BE992C7FF3] PRIMARY KEY ([VisitCaseID])
 );
 GO

@@ -130,12 +130,15 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 			left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 			/*Change this to VisitID eventually*/
 			left join rpt.BlueBookVisitInfo vi ON vi.VisitID = t.TransactionVisitID 
+												 
 												  AND vi.VisitDateOfService = t.TransactionDateOfService
-												  AND t.TransactionSubType not in ('Payment - Distributed to Charge'
+												  AND (
+                                            t.TransactionDatasourceID = 15 OR t.TransactionSubType not in ('Payment - Distributed to Charge'
 																					,'Payment - Distributed to Debit Adjustment'
 																					,'Payment - Void'
 																					,'Payment - New'
-																					,'Payment - Refund') /*Chris Cross - excluded these on 1/10/25 due to undist payments being assigned to visits without a Billing Provider*/
+																					,'Payment - Refund')) /*Chris Cross - excluded these on 1/10/25 due to undist payments being assigned to visits without a Billing Provider*/
+																										  /*Diego Hernandez - Add ModMed 6/24/26 due to modmed logic was failing based on this join*/		
 			left join fact.Visits2 v on t.TransactionVisitID = v.VisitID
 		WHERE 1=1
 			AND t.TransactionBillingType = 'PB'
