@@ -119,12 +119,28 @@ SELECT
 		WHEN DATEDIFF(MINUTE, vc.VisitCaseScheduleStartDatetime, vc.VisitCaseORBeginDatetime) between (0) and (5) THEN 'On Time'
 		WHEN DATEDIFF(MINUTE, vc.VisitCaseScheduleStartDatetime, vc.VisitCaseORBeginDatetime)> 5 THEN 'Late Start'
 			END as VisitCaseOnTimeStartStatus 
-	  ,CASE WHEN vc.VisitCaseLengthAccuracy = 'Y' THEN 'Accurate'
-		WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR < -30 THEN '30 Mins Underscheduled'
-		WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR < -50 THEN '15 Mins Underscheduled'
-		WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR > 30 THEN '30 Mins Overscheduled'
-		WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR > 15 THEN '15 Mins Overscheduled'
-			END as VisitCaseAccuracyStatus
+	 -- ,CASE WHEN vc.VisitCaseLengthAccuracy = 'Y' THEN 'Accurate'
+		--WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR < -30 THEN '30 Mins Underscheduled'
+		--WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR < -50 THEN '15 Mins Underscheduled'
+		--WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR > 30 THEN '30 Mins Overscheduled'
+		--WHEN vc.VisitCaseMinutesScheduledInOR-vc.VisitCaseMinutesInOR > 15 THEN '15 Mins Overscheduled'
+		--	END as VisitCaseAccuracyStatus
+	  ,CASE 
+    -- Most extreme underscheduled first
+		  WHEN vc.VisitCaseMinutesScheduledInOR - vc.VisitCaseMinutesInOR < -50 
+			 THEN '30+ Mins Underscheduled'
+		  WHEN vc.VisitCaseMinutesScheduledInOR - vc.VisitCaseMinutesInOR < -30 
+			   THEN '15-30 Mins Underscheduled'
+	    -- Most extreme overscheduled first        
+		  WHEN vc.VisitCaseMinutesScheduledInOR - vc.VisitCaseMinutesInOR > 30 
+			   THEN '30+ Mins Overscheduled'
+		 WHEN vc.VisitCaseMinutesScheduledInOR - vc.VisitCaseMinutesInOR > 15 
+			  THEN '15-30 Mins Overscheduled'
+	    -- Within tolerance — accurate
+		 WHEN vc.VisitCaseMinutesInOR > 0 
+			  THEN 'Accurate'
+		 ELSE NULL
+					END AS VisitCaseAccuracyStatus
       ,[VisitCaseFirstCaseofDay]
       ,[VisitCaseNotPerformedReason]
       ,[VisitCaseNotPerformedComment]
