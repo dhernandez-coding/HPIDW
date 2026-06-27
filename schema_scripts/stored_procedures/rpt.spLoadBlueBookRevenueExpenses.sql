@@ -219,34 +219,28 @@ FROM (
 
 			UNION ALL
 			-- I added this here to include THP data.
-select 
-	 YEAR(t.Date) as FiscalYear
-	,MONTH(t.Date) as FiscalPeriod
-	, CAST(a.GLAccountSourceID as varchar(255)) as GLAccountSourceID
-	,sum(t.Debit) as FiscalPeriodDebits
-	,sum(t.Credit) as FiscalPeriodCredits
-	,SUM((ISNULL(t.Debit,0) - ISNULL(t.Credit,0))) as FiscalPeriodNetChange
-from [HPIDW].[stg].[THPTransactions] t
-INNER JOIN map.vTHPClass mc
-	ON mc.[class] = t.[class]
-	AND mc.Practice = t.Practice
-LEFT JOIN  stg.vGLAccounts a on a.GLAccountName = CONCAT(t.account,'-',t.practice,'-',mc.FixedClass)
-where 1=1
-	-- 1. Exclude payments and rental income
-	--AND t.Account NOT IN ('ACCOUNTS RECEIVABLE-TPG LAB', 'RENTAL INCOME')
-	-- 2. Simplified Account Type Filter (Since AR is excluded above)
-	AND (t.account_type LIKE '%Income%' OR t.account_type = 'Expense')
-	AND t.account <> 'OTHER INCOME - NONTAX HTH INSUR' -- Excluding this because it was inflating other income for fy 2024
-	AND a.GLAccountSourceID is not null
-	AND YEAR(t.Date) >= @CurrentYear - 2 
-    -- 3. Allocation filter removed completely to align expenses to the rounded targets
-	
-	-- 4. Exclude other entities (CVFC/THP classes) but keep Xray/Lab classes
-	--AND mc.class NOT IN ('CVFC BUSINESS OFFICE', 'APCM',  'CVFC', 'THP') 
-group by 
-	 YEAR(t.Date)
-	,MONTH(t.Date)
-	,a.GLAccountSourceID
+			SELECT 
+				 YEAR(t.Date) as FiscalYear
+				,MONTH(t.Date) as FiscalPeriod
+				, CAST(a.GLAccountSourceID as varchar(255)) as GLAccountSourceID
+				,sum(t.Debit) as FiscalPeriodDebits
+				,sum(t.Credit) as FiscalPeriodCredits
+				,SUM((ISNULL(t.Debit,0) - ISNULL(t.Credit,0))) as FiscalPeriodNetChange
+			FROM [HPIDW].[stg].[THPTransactions] t
+			INNER JOIN map.vTHPClass mc
+				ON mc.[class] = t.[class]
+				AND mc.Practice = t.Practice
+			LEFT JOIN stg.vGLAccounts a 
+				ON a.GLAccountName = CONCAT(t.account,'-',t.practice,'-',mc.FixedClass)
+			WHERE 1=1
+				AND (t.account_type LIKE '%Income%' OR t.account_type = 'Expense')
+				AND t.account <> 'OTHER INCOME - NONTAX HTH INSUR'
+				AND a.GLAccountSourceID is not null
+				AND YEAR(t.Date) >= 2026- 2 
+			GROUP BY 
+				 YEAR(t.Date)
+				,MONTH(t.Date)
+				,a.GLAccountSourceID
 
 		) sub  
 			inner join stg.vGLAccounts a ON a.GLAccountSourceID = sub.GLAccountSourceID 

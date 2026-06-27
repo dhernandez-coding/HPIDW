@@ -201,45 +201,43 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 
 		UNION ALL
 
-		SELECT
-		    YEAR(thp.[Date]) AS FiscalYear,
-		    MONTH(thp.[Date]) AS FiscalPeriod,
-		    FORMAT(DATEFROMPARTS(YEAR(thp.[Date]), MONTH(thp.[Date]), 1), 'MMM-yy') AS FiscalYearPeriod,
-		    'Payments' AS ReportSection,
-		    'Office Visits' AS ReportGroupLevel1, -- Consistent grouping for THP
-		    'Misc' AS ReportGroupLevel2,
-		    '5_Payer Receipts' AS ReportGroupLevel3,
-		    NULL AS ReportGroupLevel4,
-		    p.PracticeID,
-		    pl.ParentProviderID AS ReportingProviderID, -- Linked Parent Provider
-		    SUM(thp.Original_Amount* -1) AS FiscalPeriodValue,
-		    GETDATE() AS UpdatedDatetime
-		FROM [HPIDW].[stg].[THPTransactions] thp
-		
-		LEFT JOIN dim.Practices p
-		    ON p.PracticeID = '0~' + LTRIM(RTRIM(thp.Practice))
-		
-		OUTER APPLY (
-		    SELECT TOP 1 pr.ProviderID
-		    FROM dim.Providers pr
-		    WHERE UPPER(LTRIM(RTRIM(pr.ProviderSourceID))) = UPPER(LTRIM(RTRIM(thp.Class)))
-		      AND pr.ProviderDataSourceID IN (18)
-		    ORDER BY pr.ProviderDataSourceID DESC  
-		) pr
-		LEFT JOIN map.ProviderLinking pl ON pl.ChildProviderID = pr.ProviderID  
-		WHERE thp.Account_Type = 'Income'
-		    AND thp.Account NOT IN ('RENTAL INCOME','OTHER INCOME')
-		    -- Use system parameters to match the DELETE window
-		    AND thp.[Date] >= @StartDate 
-		    AND thp.[Date] < DATEADD(MONTH, 1, @EndDate)
-		    AND p.PracticeID IN ('0~THP','0~CVFC')
-		    AND (@Practice = '0' OR p.PracticeSourceID = @Practice)
-		GROUP BY
-		    YEAR(thp.[Date]),
-		    MONTH(thp.[Date]),
-		    FORMAT(DATEFROMPARTS(YEAR(thp.[Date]), MONTH(thp.[Date]), 1), 'MMM-yy'),
-		    p.PracticeID,
-		    pl.ParentProviderID
+		SELECT --New logic dividing thp in different practices 
+			    YEAR(thp.[Date]) AS FiscalYear,
+			    MONTH(thp.[Date]) AS FiscalPeriod,
+			    FORMAT(DATEFROMPARTS(YEAR(thp.[Date]), MONTH(thp.[Date]), 1), 'MMM-yy') AS FiscalYearPeriod,
+			    'Payments' AS ReportSection,
+			    'Office Visits' AS ReportGroupLevel1,
+			    'Misc' AS ReportGroupLevel2,
+			    '5_Payer Receipts' AS ReportGroupLevel3,
+			    NULL AS ReportGroupLevel4,
+			    COALESCE(pp.PracticeID, p.PracticeID) AS PracticeID,
+			    pl.ParentProviderID AS ReportingProviderID,
+			    SUM(thp.Original_Amount * -1) AS FiscalPeriodValue,
+			    GETDATE() AS UpdatedDatetime
+			FROM [HPIDW].[stg].[THPTransactions] thp
+			LEFT JOIN dim.Practices p
+			    ON p.PracticeID = '0~' + LTRIM(RTRIM(thp.Practice))
+			LEFT JOIN dim.Providers pr
+			    ON UPPER(LTRIM(RTRIM(pr.ProviderSourceID))) = UPPER(LTRIM(RTRIM(thp.Provider)))
+			    AND pr.ProviderDataSourceID = 18
+			LEFT JOIN map.PracticeProviders pp
+			    ON pp.ProviderID = pr.ProviderID
+			    AND pp.PracticeID = p.PracticeID -- ✅ Prevents duplication for multi-practice mid-levels
+			LEFT JOIN map.ProviderLinking pl
+			    ON pl.ChildProviderID = pp.ProviderID
+			WHERE thp.Account_Type = 'Income'
+			    AND thp.Account NOT IN ('RENTAL INCOME','OTHER INCOME')
+			    AND thp.[Date] >= @StartDate 
+			    AND thp.[Date] < DATEADD(MONTH, 1, @EndDate)
+			    AND (COALESCE(pp.PracticeID, p.PracticeID) IN ('0~THP','0~CVFC') OR p.PracticeCompany = 'THP' OR pp.PracticeID LIKE '%THP%')
+			    AND (@Practice = '0' OR p.PracticeSourceID = @Practice)
+			GROUP BY
+			    YEAR(thp.[Date]),
+			    MONTH(thp.[Date]),
+			    FORMAT(DATEFROMPARTS(YEAR(thp.[Date]), MONTH(thp.[Date]), 1), 'MMM-yy'),
+			    COALESCE(pp.PracticeID, p.PracticeID),
+			    pl.ParentProviderID
+
 
 
 		) sub
