@@ -178,11 +178,12 @@ FROM (
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
 		left join dim.DataSources ds ON t.TransactionDatasourceID = ds.DataSourceID
-		left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
+		left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID  AND NOT ( pl.ChildProviderID LIKE '18~%' OR pl.ChildProviderID LIKE '17~%') --Here for handle duplicates with THP Providers on APM
 		left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 		left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 
 									AND pp.PracticeProviderEndDate >= t.TransactionDateOfPosting
+									AND pp.ProviderDataSourceID not in (18,17) --Handle THP Dups
 									--AND pp.ProviderdatasourceID = t.TransactionDatasourceID
 									AND (/*This is here to handle duplicates with Murphi Scarborough at multiple practices*/
 												(pl.ParentProviderID in ('0~1588209423') 
@@ -212,10 +213,13 @@ FROM (
 																													  OR (t.TransactionDepartmentID = '12~36' AND pp.PracticeID = '0~JCJ')
 																													  OR (t.TransactionDepartmentID = '1~19' AND pp.PracticeID = '0~JCJ2')
 																													  OR (t.TransactionDepartmentID = '1~5' AND pp.PracticeID = '0~JCJ2'))) )
-												
+												  /*This is here to handle duplicates with Joseph Broome at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1306817887') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~JCB') ) )
 												
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/
-												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251'))
+												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887')
+												)
 												
 		/*Replaced on 11.6.2024 due to duplicates caused by TMG Imaging and TMG Billing Office departments
 		left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
@@ -305,5 +309,6 @@ FROM (
 	--AND t.TransactionAccountID = '1~19228230' -- testing
 	--AND t.TransactionSourceID = 'PB~18302254~4710192' --testing
 ) sub
+ 
 
 --GO
