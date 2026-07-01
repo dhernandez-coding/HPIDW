@@ -1,4 +1,4 @@
-Create View dim.ExternalProviders
+CREATE View [dim].[vExternalProviders]
 as
 Select
 [ProviderID]
@@ -22,5 +22,5 @@ Select
       ,[ProviderNPI]
       ,[ProviderIsActive]
       ,[ProviderUpdatedDateTime]
-From dim.Providers Where ProviderDataSourceID <> 0
+From dim.vProviders Where ProviderDataSourceID <> 0
 GO

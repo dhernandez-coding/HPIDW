@@ -26,7 +26,7 @@ CREATE VIEW [rpt].[vBlueBooks] AS
       ,bb.[UpdatedDatetime]
   --select distinct FiscalYear, FiscalPeriod
   FROM [HPIDW].[rpt].[BlueBooks] bb
-	left join dim.Practices p ON p.PracticeID = bb.PracticeID
+	left join dim.vPractices p ON p.PracticeID = bb.PracticeID
   WHERE 1=1
 	AND (p.PracticeCompany <> 'EXTERNAL' OR p.PracticeCompany IS NULL) -- Modifying this to include 10~Default DH
 	AND bb.FiscalYear >= 2023

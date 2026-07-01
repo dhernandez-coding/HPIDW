@@ -1,19 +1,19 @@
 -- =============================================
 -- Author:		Ryan Tisserand
--- Create date: <Create Date,,>
+-- ALTER PROCEDUREeate Date,,>
 -- Description:	Extracts, Transforms and Loads Provider Data from APM Source System into a dim Table
 -- Change Control
 --	1. 11/23/2022 - Ryan Tisserand - Initial build of procedure
 --  2. 03/10/2023 - Ryan Tisserand - Added delete statement to replace truncate job step
 -- =============================================
-CREATE PROCEDURE [stg].[spAPMReloadDimProvidersFull]
+CREATE   PROCEDURE [stg].[spAPMReloadDimProvidersFull]
 AS
 BEGIN
 SET NOCOUNT ON;
 
-delete from dim.Providers where ProviderDataSourceID = 1
+delete from dim.vProviders where ProviderDataSourceID = 1
 
-insert into dim.Providers
+insert into dim.vProviders
 (
 	ProviderID,
 	ProviderDataSourceID,

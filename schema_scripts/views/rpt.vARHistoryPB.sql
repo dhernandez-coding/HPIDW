@@ -220,7 +220,7 @@ FROM (
 																													OR (ar.TransactionDepartmentID = '1~5' AND pp.PracticeID = '0~JCJ2'))) )
 											/*All other providers without specific mapping issues due to multiple practices as defined above*/
 											OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251'))
-	left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+	left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 WHERE 1=1
 
 

@@ -34,7 +34,7 @@ WITH Base AS
 
         CAST(vc.VisitCaseDatesourceID AS varchar(50)) AS source_system_id
     FROM fact.VisitCases vc
-    LEFT JOIN dim.Providers p
+    LEFT JOIN dim.vProviders p
         ON p.ProviderID = CONCAT('5~', vc.VisitCasePhysician)
     LEFT JOIN fact.VisitProcedures vp
         ON vp.VisitProcedureVisitID = vc.VisitCaseVisitID

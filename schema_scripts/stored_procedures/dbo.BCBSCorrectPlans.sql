@@ -1,11 +1,11 @@
 -- =============================================
 -- Author:		<Author,Diego Hernandez>
--- Create date: <2/28/2025>
+-- ALTER PROCEDURE28/2025>
 -- Description:	<StoreProcedure for mapping the correct BCB>
 
 -- =============================================
 --EXEC [dbo].[BCBSCorrectPlans]
-CREATE PROCEDURE [dbo].[BCBSCorrectPlans] AS
+CREATE   PROCEDURE [dbo].[BCBSCorrectPlans] AS
 BEGIN
 SET NOCOUNT ON;
 
@@ -148,7 +148,7 @@ Charges AS (
             ELSE ''
         END AS ModifierUsed
     FROM fact.vPBCharges c
-	LEFT JOIN dim.[Practices] prac
+	LEFT JOIN dim.[vPractices] prac
 		ON prac.PracticeID = c.TransactionPracticeID
 
     WHERE c.FeeScheduleName IN ('BlueTraditional','BlueAdvantage','BlueChoice','BluePreferred')
@@ -545,7 +545,7 @@ END;
 	
 --	from #TempTable) sub
 --	left join dim.vProviders p on sub.TransactionBillingProviderID = p.ProviderID
---	left join dim.Practices ps on sub.TransactionPracticeID = ps.PracticeID
+--	left join dim.vPractices ps on sub.TransactionPracticeID = ps.PracticeID
 
 --	WHERE 1=1
 

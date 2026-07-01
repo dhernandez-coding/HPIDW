@@ -102,7 +102,7 @@ LEFT JOIN dim.Departments dt
 										AND ((ar.TransactionBillingProviderID in ('1~19898','5~126867','1~19711','5~125582') AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND ar.TransactionBillingProviderID = pp.ProviderID)))
 											  OR ar.TransactionBillingProviderID not in ('1~19898','5~126867','1~19711','5~125582'))
 										--AND pp.ProviderID = t.TransactionBillingProviderID
-	left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+	left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 --LEFT JOIN dim.dates gd
 --	ON FORMAT(GETDATE(), 'yyyy-dd-MM') = FORMAT(gd.[Date], 'yyyy-dd-MM')
 

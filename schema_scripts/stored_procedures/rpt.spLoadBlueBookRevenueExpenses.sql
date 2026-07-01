@@ -1,4 +1,4 @@
-CREATE PROCEDURE [rpt].[spLoadBlueBookRevenueExpenses] as 
+CREATE PROCEDURE  [rpt].[spLoadBlueBookRevenueExpenses] as 
 
 	--@CurrentYear int 
 	--,@CurrentPeriod int 
@@ -44,7 +44,7 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 			,count(pp1.ProviderID) as ProviderCount
 			,sum(pp1.PracticeProviderAllocationPercent) as AllocationPercentTotal
 		from dim.Dates d 
-			left join map.PracticeProviders pp1 ON pp1.PracticeProviderEffectiveDate <= d.Date
+			left join map.vPracticeProviders pp1 ON pp1.PracticeProviderEffectiveDate <= d.Date
 												  AND pp1.PracticeProviderEndDate >= d.Date
 												  AND ISNULL(pp1.PracticeProviderAllocationPercent,0) > 0
 		where 1=1
@@ -56,7 +56,7 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 			,pp1.PracticeID
 			,pp1.PracticeProviderLocation
 		) sub
-		LEFT JOIN map.PracticeProviders pp ON pp.PracticeID = sub.PracticeID
+		LEFT JOIN map.vPracticeProviders pp ON pp.PracticeID = sub.PracticeID
 											  --AND (pp.PracticeProviderLocation is null OR pp.PracticeProviderLocation = sub.PracticeProviderLocation)
 											  AND ISNULL(pp.PracticeProviderLocation,'0') = ISNULL(sub.PracticeProviderLocation,'0')
 											  AND pp.PracticeProviderEffectiveDate <= sub.Date
@@ -245,15 +245,15 @@ FROM (
 		) sub  
 			inner join stg.vGLAccounts a ON a.GLAccountSourceID = sub.GLAccountSourceID 
 										--AND (@Practice = '0' /*0 - All*/ OR a.GLAccountPractice = @Practice)
-			left join dim.Practices p ON p.PracticeSourceID = a.GLAccountPractice
-			left join dim.Providers prv ON prv.ProviderDataSourceID = 10 AND prv.ProviderSourceID = a.GLAccountReportingProvider
+			left join dim.vPractices p ON p.PracticeSourceID = a.GLAccountPractice
+			left join dim.vProviders prv ON prv.ProviderDataSourceID = 10 AND prv.ProviderSourceID = a.GLAccountReportingProvider
 			left join #TEMP_ProviderAllocations pp ON pp.PracticeID = p.PracticeID
 													  and a.GLAccountProviderID = '000' /*Not directly attributed to a provider*/
 													  and (pp.PracticeProviderLocation is null OR pp.PracticeProviderLocation = TRIM(a.GLAccountLocation))
 												      and DATEFROMPARTS(sub.FiscalYear,sub.FiscalPeriod,1) = pp.Date
 													  and a.GLAccountIsAllocated = 1
 												 
-			/*left join map.PracticeProviders pp ON pp.PracticeID = p.PracticeID 
+			/*left join map.vPracticeProviders pp ON pp.PracticeID = p.PracticeID 
 												  and a.GLAccountProviderID = '000' /*Not directly attributed to a provider*/
 												  and (pp.PracticeProviderLocation is null OR pp.PracticeProviderLocation = a.GLAccountLocation)
 												  and DATEFROMPARTS(sub.FiscalYear,sub.FiscalPeriod,1) between pp.PracticeProviderEffectiveDate AND pp.PracticeProviderEndDate
@@ -291,8 +291,8 @@ FROM (
 		,pp.ProviderID
 		,0 as FiscalPeriodValue
 		,GETDATE()
-	from dim.Practices p
-		left join map.PracticeProviders pp ON pp.PracticeID = p.PracticeID
+	from dim.vPractices p
+		left join map.vPracticeProviders pp ON pp.PracticeID = p.PracticeID
 		cross join (SELECT bb.ReportSection, bb.ReportGroupLevel1, min(ReportGroupLevel2) as ReportGroupLevel2
 					FROM rpt.BlueBooks bb
 					WHERE ((bb.ReportSection in ('Revenue') and bb.ReportGroupLevel1 in ('05_Other Income','01_Total Professional Services'))
@@ -317,8 +317,8 @@ GROUP BY
 	
 
 
-	--select * from dim.Practices p where p.PracticeIsActive = 1
-	--select * from map.PracticeProviders
+	--select * from dim.vPractices p where p.PracticeIsActive = 1
+	--select * from map.vPracticeProviders
 	
 
 	--exec rpt.spLoadBlueBookVisits

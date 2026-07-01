@@ -1,9 +1,9 @@
 -- =============================================
 -- Author:		<Cross, Chris>
--- Create date: <1/11/2024>
+-- ALTER PROCEDURE11/2024>
 -- Description:	<Reload of PaymentLag table (Payment lag for Practice)>
 -- =============================================
-CREATE PROCEDURE [rpt].[spReloadPBPaymentLag] 
+CREATE   PROCEDURE [rpt].[spReloadPBPaymentLag] 
 AS
 BEGIN
     IF OBJECT_ID('tempdb..#TEMP_DaysToPay') IS NOT NULL 
@@ -41,7 +41,7 @@ BEGIN
             AND ((c.TransactionBillingProviderID IN ('1~19898', '5~126867', '1~19711', '5~125582', '5~122305', '5~104092', '5~120997', '1~14003', '1~18356', '1~13986')
                   AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID IS NULL AND c.TransactionBillingProviderID = pp.ProviderID)))
                  OR c.TransactionBillingProviderID NOT IN ('1~19898', '5~126867', '1~19711', '5~125582', '5~122305', '5~104092', '5~120997', '1~14003', '1~18356', '1~13986'))
-        LEFT JOIN dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID, pp.PracticeID)
+        LEFT JOIN dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID, pp.PracticeID)
         LEFT JOIN dim.Payers py ON py.PayerID = p.TransactionPayerID
         LEFT JOIN dim.PayerGroups pyg ON pyg.PayerGroupID = py.PayerGroupID
         WHERE p.TransactionType = 'Payment'

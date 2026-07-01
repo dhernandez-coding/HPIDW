@@ -1,11 +1,11 @@
 -- =============================================
 -- Author:		Ryan Tisserand
--- Create date: 02/24/2023
+-- ALTER PROCEDURE24/2023
 -- Description:	Extracts, Transforms and Loads Provider Data from internal Source System into a dim Table
 -- Change Control
 --	1. 02/24/2023 - Ryan Tisserand - Initial build of procedure
 -- =============================================
-CREATE PROCEDURE [stg].[spHPIReloadDimProvidersFull]
+CREATE   PROCEDURE [stg].[spHPIReloadDimProvidersFull]
 AS
 BEGIN
 SET NOCOUNT Off;
@@ -44,12 +44,12 @@ PRINT 'Inserting records into #TEMP_Staging Table....'
 
 IF (SELECT COUNT(*) FROM #TEMP_Staging)  > 100 
 BEGIN
-	PRINT 'Deleting records from dim.Providers...'
-	delete from dim.Providers where ProviderDataSourceID = 0
+	PRINT 'Deleting records from dim.vProviders...'
+	delete from dim.vProviders where ProviderDataSourceID = 0
 
 
-	PRINT 'Inserting records into dim.Providers...'
-	insert into dim.Providers
+	PRINT 'Inserting records into dim.vProviders...'
+	insert into dim.vProviders
 	(
 		ProviderID,
 		ProviderDataSourceID,

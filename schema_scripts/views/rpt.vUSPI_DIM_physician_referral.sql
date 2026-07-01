@@ -17,7 +17,7 @@ SELECT DISTINCT
 FROM 
     rpt.vEpicReferrals r
 LEFT JOIN 
-    HPIDW.dim.Providers c
+    HPIDW.dim.vProviders c
     ON r.ReferredByProviderID = c.ProviderID
 LEFT JOIN 
   [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].[CLARITY_SER_2] pa 

@@ -1,11 +1,11 @@
 -- =============================================
 -- Author:		Eric Silvestri
--- Create date: 05/10/2024
+-- ALTER PROCEDURE10/2024
 -- Description:	Stored Procedure to load the PB Month End reports
 
 
 -- =============================================
-CREATE PROCEDURE [rpt].[spPBMonthEndReporting]
+CREATE   PROCEDURE [rpt].[spPBMonthEndReporting]
 
 	 @CurrentYear int 
 	,@CurrentPeriod int 
@@ -55,7 +55,7 @@ SELECT
 	,CASE WHEN DATEFROMPARTS(LEFT(t.TransactionReportPeriodDate, 4), RIGHT(t.TransactionReportPeriodDate, 2),1) between @13MonthStartDate AND DATEADD(DAY,-1,@EndDate) THEN 'Y' ELSE 'N' END as PBMonthEndTrailing13Months
 	
 FROM [HPIDW].[fact].[vTransactionsPB] t
-	LEFT JOIN dim.Practices p on p.PracticeID = t.TransactionPracticeID
+	LEFT JOIN dim.vPractices p on p.PracticeID = t.TransactionPracticeID
 	LEFT JOIN dim.vProviders pr on pr.ProviderID = t.TransactionBillingProviderID
 	LEFT JOIN dim.vPayers pa on pa.PayerID = t.TransactionPayerID
 	LEFT JOIN dim.vPatients pt on pt.PatientID = t.PatientID

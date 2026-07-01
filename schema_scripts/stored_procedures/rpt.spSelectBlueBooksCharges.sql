@@ -1,4 +1,4 @@
-CREATE PROCEDURE [rpt].[spSelectBlueBooksCharges]
+CREATE PROCEDURE  [rpt].[spSelectBlueBooksCharges]
 
 	@CurrentYear int 
 	,@CurrentPeriod int 
@@ -60,9 +60,9 @@ SELECT [FiscalYear]
 			AND b.ReportSection = 'Charges'
 			AND DATEFROMPARTS(b.FiscalYear, b.FiscalPeriod,1) between @StartDate and @EndDate
   ) bb
-	left join dim.Practices p ON p.PracticeID = bb.PracticeID
+	left join dim.vPractices p ON p.PracticeID = bb.PracticeID
 	left join dim.vProviders prv ON prv.ProviderID = bb.ReportingProviderID 
-	left join map.PracticeProviders pp ON pp.PracticeID = bb.PracticeID AND pp.ProviderID = bb.ReportingProviderID
+	left join map.vPracticeProviders pp ON pp.PracticeID = bb.PracticeID AND pp.ProviderID = bb.ReportingProviderID
   WHERE 1=1
 	AND DATEFROMPARTS(bb.FiscalYear, bb.FiscalPeriod,1) between @StartDate and @EndDate
 	AND (@Practice = '0' OR p.PracticeSourceID = @Practice)

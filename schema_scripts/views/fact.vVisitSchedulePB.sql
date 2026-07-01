@@ -57,7 +57,7 @@ SELECT
 	LEFT JOIN dim.vPatients pt on pt.PatientID = vs.VisitSchedulePatientID
 	LEFT JOIN dim.vLocations l on l.LocationID = vs.VisitScheduleLocationID
 	LEFT JOIN map.PracticeDepartments pd on pd.DepartmentID = vs.VisitScheduleDepartmentID
-	LEFT JOIN dim.Practices pr on pr.PracticeID = pd.PracticeID
+	LEFT JOIN dim.vPractices pr on pr.PracticeID = pd.PracticeID
 	LEFT JOIN dim.vPayers pp on pp.PayerID = vs.VisitSchedulePayerID
 WHERE 1=1 
 	AND p.ProviderFullName NOT LIKE 'TPG%'

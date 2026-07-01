@@ -19,7 +19,7 @@ select
 	,bb.FiscalPeriodValue
 	,CASE WHEN ((P.PracticeCompany = 'HPIP' or p.PracticeAbbreviation='BET') AND p.PracticeName not in ('HPIP Anesthesia')) OR p.PracticeIsSameStore = 1 THEN 'Include' ELSE 'Exclude' END as IsIncluded
 from rpt.BlueBooks bb
-	left join dim.Practices p ON p.PracticeID = bb.PracticeID
+	left join dim.vPractices p ON p.PracticeID = bb.PracticeID
 	LEFT JOIN (
     SELECT
         Year,

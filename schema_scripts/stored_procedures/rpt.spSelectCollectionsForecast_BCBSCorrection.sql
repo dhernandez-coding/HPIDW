@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS #TEMP_Charges
 	INTO #TEMP_Charges
 	FROM fact.vPBChargeCorrected t 
 		--left join rpt.PBPaymentLag pd ON pd.PracticeID = t.TransactionPracticeID  
-		left join dim.Practices pr ON pr.PracticeID = t.TransactionPracticeID
+		left join dim.vPractices pr ON pr.PracticeID = t.TransactionPracticeID
 		--inner join #Balance b on b.TransactionParentSourceID = t.TransactionParentSourceID
 	WHERE 1=1
 		--AND t.TransactionDatasourceID = 5
@@ -94,7 +94,7 @@ DROP TABLE IF EXISTS #TEMP_Collections
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/
 												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231'))
 												--AND pp.ProviderID = t.TransactionBillingProviderID
-			left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+			left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 			left join dim.Payers py ON py.PayerID = p.TransactionPayerID
 			left join dim.PayerGroups pyg ON pyg.PayerGroupID = py.PayerGroupID
 		WHERE 1=1

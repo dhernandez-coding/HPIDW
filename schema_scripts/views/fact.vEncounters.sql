@@ -1,4 +1,4 @@
-CREATE view [fact].[vEncounters] as
+CREATE VIEW [fact].[vEncounters] as
 
 SELECT
 	[EncounterID]
@@ -43,13 +43,13 @@ FROM [HPIDW].[fact].[Encounters] e
 	left join dim.DataSources d ON d.DataSourceID = e.EncounterDataSourceID
 	left join dim.Locations l ON l.LocationID = e.EncounterLocationID
 	left join dim.Departments dep ON dep.DepartmentID = e.EncounterDepartmentID
-	left join dim.Providers prvpf ON prvpf.ProviderID = e.EncounterPrimaryProviderID 
+	left join dim.vProviders prvpf ON prvpf.ProviderID = e.EncounterPrimaryProviderID 
 		left join dim.vProviderNPIs npipf ON npipf.ProviderNPI = prvpf.ProviderNPI
 		left join dim.Specialties spcpf ON spcpf.SpecialtyID = prvpf.ProviderSpecialtyID
-	left join dim.Providers prvad ON prvad.ProviderID = e.EncounterAdmittingProviderID 	
+	left join dim.vProviders prvad ON prvad.ProviderID = e.EncounterAdmittingProviderID 	
 		left join dim.vProviderNPIs npiad ON npiad.ProviderNPI = prvad.ProviderNPI
 		left join dim.Specialties spcad ON spcad.SpecialtyID = prvad.ProviderSpecialtyID
-	left join dim.Providers prvat ON prvat.ProviderID = e.EncounterAttendingProviderID 
+	left join dim.vProviders prvat ON prvat.ProviderID = e.EncounterAttendingProviderID 
 		left join dim.vProviderNPIs npiat ON npiat.ProviderNPI = prvat.ProviderNPI
 		left join dim.Specialties spcat ON spcat.SpecialtyID = prvat.ProviderSpecialtyID
 where year(EncounterDateOfService) >= (year(getdate()) - 2)

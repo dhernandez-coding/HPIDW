@@ -77,7 +77,7 @@ FROM fact.vPBCharges t
 
 --LEFT JOIN fact.Accounts a ON t.TransactionAccountID = a.AccountID
 LEFT JOIN dim.Dates dop	ON FORMAT(t.TransactionDateOfPosting, 'yyyy-dd-MM') = FORMAT(dop.[Date], 'yyyy-dd-MM')
-LEFT JOIN dim.Providers p ON t.TransactionBillingProviderID = p.ProviderID
+LEFT JOIN dim.vProviders p ON t.TransactionBillingProviderID = p.ProviderID
 --LEFT JOIN dim.dates gd
 --	ON FORMAT(GETDATE(), 'yyyy-dd-MM') = FORMAT(gd.[Date], 'yyyy-dd-MM')
 

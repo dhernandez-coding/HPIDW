@@ -1,13 +1,13 @@
 -- =============================================
 -- Author:		Ryan Tisserand
--- Create date: 02/24/2023
+-- ALTER PROCEDURE24/2023
 -- Description:	Extracts, Transforms and Loads Provider Data from EPIC Source System into a dim Table
 -- Change Control
 --	1. 02/24/2023 - Ryan Tisserand - Initial build of procedure
 --	2. 06/24/2024 - Robert Beaird - Brought in Provider Title
 --  3. 05/09/2025 - Diego Hernandez - Safe load
 -- =============================================
-CREATE PROCEDURE [stg].[spEPICReloadDimProvidersFull] AS
+CREATE   PROCEDURE [stg].[spEPICReloadDimProvidersFull] AS
 
 BEGIN
 SET NOCOUNT ON;
@@ -121,9 +121,9 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
         BEGIN TRANSACTION;
             PRINT 'At least 10 records found. Proceeding to delete and reload.';
             
-            DELETE FROM dim.Providers WHERE ProviderDataSourceID = 5;
+            DELETE FROM dim.vProviders WHERE ProviderDataSourceID = 5;
 
-            INSERT INTO dim.Providers (
+            INSERT INTO dim.vProviders (
                 ProviderID,
                 ProviderDataSourceID,
                 ProviderSourceID,
@@ -268,9 +268,9 @@ END;
 --        BEGIN TRANSACTION;
 --            PRINT 'At least 10 records found. Proceeding to delete and reload.';
             
---            DELETE FROM dim.Providers WHERE ProviderDataSourceID = 5;
+--            DELETE FROM dim.vProviders WHERE ProviderDataSourceID = 5;
 
---            INSERT INTO dim.Providers (
+--            INSERT INTO dim.vProviders (
 --                ProviderID,
 --                ProviderDataSourceID,
 --                ProviderSourceID,

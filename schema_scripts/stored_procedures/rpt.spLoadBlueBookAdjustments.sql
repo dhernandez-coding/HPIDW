@@ -1,4 +1,4 @@
-CREATE PROCEDURE [rpt].[spLoadBlueBookAdjustments] as
+CREATE PROCEDURE  [rpt].[spLoadBlueBookAdjustments] as
 
 
 
@@ -106,12 +106,12 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 				--										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~RLN') ) )
 				--									/*All other providers without specific mapping issues due to multiple practices as defined above*/
 				--									OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231'))
-				--left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+				--left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 			/*Change this to VisitID eventually*/
 			left join rpt.BlueBookVisitInfo vi ON vi.VisitID = t.TransactionVisitID AND vi.VisitDateOfService = t.TransactionDateOfService
 												--  AND t.TransactionSubType not in ('Payment - Distributed','Payment - New') /*Chris Cross - excluded these on 1/10/25 due to undist payments being assigned to visits without a Billing Provider*/
 			left join fact.Visits2 v on t.TransactionVisitID = v.VisitID
-			left join dim.Practices pt ON pt.PracticeID = t.TransactionPracticeID --<Replaced by practice mapping from view on 6/9/25 - Chris Cross
+			left join dim.vPractices pt ON pt.PracticeID = t.TransactionPracticeID --<Replaced by practice mapping from view on 6/9/25 - Chris Cross
 		WHERE 1=1
 			AND t.TransactionBillingType = 'PB'
 			AND t.TransactionType in ('Adjustment')
@@ -161,8 +161,8 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 			,pp.ProviderID
 			,0 as FiscalPeriodValue
 			,GETDATE()
-		from dim.Practices p
-			left join map.PracticeProviders pp ON pp.PracticeID = p.PracticeID
+		from dim.vPractices p
+			left join map.vPracticeProviders pp ON pp.PracticeID = p.PracticeID
 			cross join (SELECT bb.ReportSection, bb.ReportGroupLevel1, max(ReportGroupLevel2) as ReportGroupLevel2, max(ReportGroupLevel3) as ReportGroupLevel3
 						FROM rpt.BlueBooks bb
 						WHERE bb.ReportSection in ('Adjustments') and bb.ReportGroupLevel1 is not null

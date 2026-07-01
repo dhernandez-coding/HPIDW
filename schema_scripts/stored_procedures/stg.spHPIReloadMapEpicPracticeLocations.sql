@@ -1,4 +1,4 @@
-CREATE PROCEDURE [stg].[spHPIReloadMapEpicPracticeLocations] as
+CREATE PROCEDURE  [stg].[spHPIReloadMapEpicPracticeLocations] as
 
 TRUNCATE TABLE map.EpicPracticeLocations
 INSERT INTO map.EpicPracticeLocations SELECT '5~99304700196','0~ADB',1,0,1,0,GETDATE() --Location: HPIP AD BEACHAM - THE SPINE CLINIC; Practice: Dr. A. Doug Beacham

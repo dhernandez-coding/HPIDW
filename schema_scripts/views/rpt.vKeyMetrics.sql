@@ -11,7 +11,7 @@ WITH BaseData AS (
         bb.ReportGroupLevel1,
         SUM(bb.FiscalPeriodValue) AS Value
     FROM rpt.vBlueBooks bb
-    LEFT JOIN dim.Practices p ON p.PracticeID = bb.PracticeID
+    LEFT JOIN dim.vPractices p ON p.PracticeID = bb.PracticeID
     WHERE 1=1 -- p.PracticeCompany = 'TPG' 
       AND bb.ReportSection IN ('Non-Assist Visits', 'Payments', 'Expenses', 'Revenue')
     GROUP BY 

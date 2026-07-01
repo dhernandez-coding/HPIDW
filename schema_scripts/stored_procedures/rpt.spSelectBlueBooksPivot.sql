@@ -442,10 +442,10 @@ FROM (
 				,p.ParentProviderID
 			
 	  ) bb
-		left join dim.Practices p ON p.PracticeID = bb.PracticeID
+		left join dim.vPractices p ON p.PracticeID = bb.PracticeID
 		left join dim.vProviders prv ON prv.ProviderID = bb.ReportingProviderID 
-		left join ( SELECT pr.ParentProviderID, pr.ProviderFullName, p.* 
-					FROM map.PracticeProviders p 
+		left join ( SELECT pr.ParentProviderID, pr.ProviderFullName, p.PracticeID, p.PracticeProviderIsPrimary, p.PracticeProviderFTE, p.PracticeProviderAllocationPercent, p.PracticeProviderIsSpecialist, p.PracticeProviderIsMidLevel, p.PracticeProviderIsActive
+					FROM map.vPracticeProviders p 
 						left join dim.vProviders pr ON pr.ProviderID = p.ProviderID) pp ON pp.PracticeID = bb.PracticeID AND pp.ParentProviderID = prv.ParentProviderID--bb.ReportingProviderID
 	  WHERE 1=1
 		AND DATEFROMPARTS(bb.FiscalYear, CASE WHEN bb.FiscalPeriod = 0 THEN 1 ELSE bb.FiscalPeriod END,1) between @StartDate and @EndDate
@@ -457,8 +457,8 @@ FROM (
 	left join (select
 					p.PracticeID
 					,count(distinct pp.ProviderID) PracticeProviderCount
-				from dim.Practices p
-					left join map.PracticeProviders pp ON  pp.PracticeID = p.PracticeID
+				from dim.vPractices p
+					left join map.vPracticeProviders pp ON  pp.PracticeID = p.PracticeID
 				where 1=1
 					and p.PracticeIsActive = 1
 					and pp.PracticeProviderIsPrimary = 0

@@ -45,7 +45,7 @@ SELECT
 	LEFT JOIN dim.vProviders p on p.ProviderID = vs.VisitStatsProviderID
 	LEFT JOIN dim.vDepartments d on d.DepartmentID = vs.VisitStatsDepartmentID
 	LEFT JOIN map.PracticeDepartments pd on pd.DepartmentID = vs.VisitStatsDepartmentID
-	LEFT JOIN dim.Practices pr on pr.PracticeID = pd.PracticeID
+	LEFT JOIN dim.vPractices pr on pr.PracticeID = pd.PracticeID
   WHERE 1=1 
   	AND p.ProviderFullName NOT LIKE 'TPG%'
 	AND p.ProviderFullName NOT LIKE 'HPIP%'

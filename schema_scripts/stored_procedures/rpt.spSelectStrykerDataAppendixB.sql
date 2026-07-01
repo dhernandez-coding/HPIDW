@@ -36,7 +36,7 @@ PRINT 'Returning Results Appendix B...'
 		vc.VisitCaseID as 'CaseID'
 		,p.PatientMRN as 'MedicalRecordNumber'
 		,(SELECT pro.ProviderFirstName+ ' ' +pro.ProviderLastName
-        FROM dim.Providers pro 
+        FROM dim.vProviders pro 
         WHERE pro.ProviderID = v.VisitPrimaryProviderID)  as 'PrimarySurgeon' 
 		,pf.VisitProcedureDescription as 'Primaryproceduredescription'
 		,vc.VisitCaseASARating as 'ASAClass'

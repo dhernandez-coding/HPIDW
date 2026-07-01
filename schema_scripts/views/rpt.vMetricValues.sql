@@ -44,9 +44,9 @@ LEFT JOIN rpt.Metrics m
 	ON v.MetricID = m.MetricID
 LEFT JOIN dim.departments d
 	ON v.DepartmentID = d.DepartmentID
-LEFT JOIN dim.providers pv
+LEFT JOIN dim.vProviders pv
 	ON v.ProviderID = pv.ProviderID
-LEFT JOIN dim.Practices pc
+LEFT JOIN dim.vPractices pc
 	ON v.PracticeID = pc.PracticeID
 LEFT JOIN dim.Payers py
 	ON v.PayerID = py.PayerID

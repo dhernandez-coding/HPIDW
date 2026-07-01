@@ -145,7 +145,7 @@ CREATE VIEW [rpt].[vEpicReferrals] as
 		
 		left join dim.vDepartments db on db.DepartmentID = CONCAT('5~',r.[REFD_BY_DEPT_ID]) 
 		left join dim.vDepartments dt on dt.DepartmentID = CONCAT('5~',r.[REFD_TO_DEPT_ID]) 
-		--left join dim.Practices pt on pt.PracticeID = dt.PracticeID
+		--left join dim.vPractices pt on pt.PracticeID = dt.PracticeID
 		
 		--left join map.EpicPracticeProviders ppb ON ppb.ProviderID = CONCAT('5~',c.PROV_ID)
 		left join map.ProviderLinking plb ON plb.ChildProviderID = CONCAT('5~',c.PROV_ID)

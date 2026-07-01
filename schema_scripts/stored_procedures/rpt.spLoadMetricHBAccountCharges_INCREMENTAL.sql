@@ -78,7 +78,7 @@ SELECT
 	,GETDATE()							AS [UpdateDatetime] 
 FROM [HPIDW].[fact].vAccounts a
 	LEFT JOIN dim.Dates dop	ON FORMAT(a.AccountDateOfService, 'yyyy-dd-MM') = FORMAT(dop.[Date], 'yyyy-dd-MM')
-	LEFT JOIN dim.Providers p ON a.AccountPrimaryProviderID = p.ProviderID
+	LEFT JOIN dim.vProviders p ON a.AccountPrimaryProviderID = p.ProviderID
 
 
 WHERE 1=1

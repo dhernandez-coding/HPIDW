@@ -1,6 +1,6 @@
---CREATE PROCEDURE [rpt].[spSelectCollectionsForecast_BCBSCorrection] as
+--ALTER PROCEDUREPROCEDURE [rpt].[spSelectCollectionsForecast_BCBSCorrection] as
 
-CREATE PROCEDURE [rpt].[spSelectCollectionsForecast] as
+CREATE   PROCEDURE [rpt].[spSelectCollectionsForecast] as
 
 
 /*Create #TEMP_Charges Table*/
@@ -24,7 +24,7 @@ DROP TABLE IF EXISTS #TEMP_Charges
 	INTO #TEMP_Charges
 	FROM fact.vPBCharges t 
 		--left join rpt.PBPaymentLag pd ON pd.PracticeID = t.TransactionPracticeID  
-		left join dim.Practices pr ON pr.PracticeID = t.TransactionPracticeID
+		left join dim.vPractices pr ON pr.PracticeID = t.TransactionPracticeID
 	WHERE 1=1
 		AND t.TransactionDateOfPosting >= '1/1/2024' /*Fee schedules are loaded for 2024 forward*/
 		AND t.TransactionDateOfPosting >= DATEFROMPARTS(YEAR(GETDATE())-2,1,1)
@@ -90,7 +90,7 @@ DROP TABLE IF EXISTS #TEMP_Collections
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/
 												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231'))
 												--AND pp.ProviderID = t.TransactionBillingProviderID
-			left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+			left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 			left join dim.Payers py ON py.PayerID = p.TransactionPayerID
 			left join dim.PayerGroups pyg ON pyg.PayerGroupID = py.PayerGroupID
 		WHERE 1=1
@@ -161,7 +161,7 @@ SELECT * FROM #TEMP_Collections
 																						AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND c.TransactionBillingProviderID = pp.ProviderID)))
 														OR c.TransactionBillingProviderID not in ('1~19898','5~126867','1~19711','5~125582','5~122305','5~104092','5~120997','1~14003','1~18356','1~13986'))
 												--AND pp.ProviderID = t.TransactionBillingProviderID
-			left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+			left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 			left join dim.Payers py ON py.PayerID = p.TransactionPayerID
 			left join dim.PayerGroups pyg ON pyg.PayerGroupID = py.PayerGroupID
 		WHERE 1=1

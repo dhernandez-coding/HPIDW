@@ -1,4 +1,4 @@
-create view [dim].[vProviders2] as
+CREATE VIEW [dim].[vProviders2] as
 
 
 SELECT
@@ -26,7 +26,7 @@ SELECT
 	--,p.[ProviderNPI]
 	,p.[ProviderIsActive]
 	--,p.[ProviderUpdatedDateTime]
-FROM [HPIDW].[dim].[Providers] p
+FROM [HPIDW].[dim].[vProviders] p
 where p.ProviderDataSourceID = 0
 	--where coalesce(cast(pl.ProviderNPI as varchar), p.[ProviderNPI]) = '1578665063'
 
@@ -57,10 +57,10 @@ where p.ProviderDataSourceID = 0
 --	,p.[ProviderNPI]
 --	,p.[ProviderIsActive]
 --	,p.[ProviderUpdatedDateTime]
---FROM [HPIDW].[dim].[Providers] p
+--FROM [HPIDW].[dim].[vProviders] p
 --	left join [HPIDW].[dim].[DataSources] ds ON ds.DataSourceID = p.ProviderDataSourceID
 --	left join hpidw.map.ProviderLinking pl on p.ProviderID = pl.ChildProviderID
---	left join dim.Providers p2 on pl.ParentProviderID = p2.ProviderID
+--	left join dim.vProviders p2 on pl.ParentProviderID = p2.ProviderID
 --	--where p2.ProviderSpecialtyID is not null
 --	--where coalesce(cast(pl.ProviderNPI as varchar), p.[ProviderNPI]) = '1578665063'
 GO

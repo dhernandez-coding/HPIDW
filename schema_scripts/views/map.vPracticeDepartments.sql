@@ -10,5 +10,5 @@ SELECT [PracticeDepartmentID]
       ,[PracticeDepartmentUpdatedDatetime]
   FROM [HPIDW].[map].[PracticeDepartments] pd
   left join dim.Departments d ON d.DepartmentID = pd.DepartmentID
-  left join dim.Practices p ON p.PracticeID = pd.PracticeID
+  left join dim.vPractices p ON p.PracticeID = pd.PracticeID
 GO

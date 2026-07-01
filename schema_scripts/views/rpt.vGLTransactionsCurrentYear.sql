@@ -38,7 +38,7 @@ SELECT
 FROM 
     CORVMAP22.TPG.dbo.GL20000 AS GL        -- General Ledger transaction table
 	left join stg.vGLAccounts a ON a.GLAccountSourceID = gl.ACTINDX
-	left join dim.Providers prv ON prv.ProviderDataSourceID = 10 AND prv.ProviderSourceID = a.GLAccountReportingProvider
+	left join dim.vProviders prv ON prv.ProviderDataSourceID = 10 AND prv.ProviderSourceID = a.GLAccountReportingProvider
 WHERE 
     GL.TrxDate BETWEEN '2024-09-01' AND '2024-09-30'  -- Adjust the date range as needed
 	and prv.ProviderID = '10~Default'

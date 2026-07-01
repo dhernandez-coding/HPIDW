@@ -1,4 +1,4 @@
-create procedure [dbo].[etl_practices_to_hero]
+CREATE PROCEDURE [dbo].[etl_practices_to_hero]
 AS
 
 insert into [HERO-DB].[hpi].[stg].[Practicess]
@@ -63,7 +63,7 @@ Select
       ,null as [DepartmentId]
 	  ,Cast(0 as bit) as [IncludeInBlueBooks]
 
-from HPIDW.dim.Practices prac
+from HPIDW.dim.vPractices prac
 left join [HERO-DB].[hpi].dbo.Companiess company on prac.PracticeCompany = company.CompanyName
 left join [HERO-DB].[hpi].dbo.Specialtiess specialty on prac.PracticeSpecialty = specialty.SpecialtyName
 --left join hpi_etl.dbo.Departmentss department on prac.Department = company.CompanyName

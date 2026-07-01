@@ -77,7 +77,7 @@ FROM fact.vTransactions2 t
 
 LEFT JOIN fact.Accounts a ON t.TransactionAccountID = a.AccountID
 LEFT JOIN dim.Dates dop ON FORMAT(t.TransactionDateOfPosting, 'yyyy-dd-MM') = FORMAT(dop.[Date], 'yyyy-dd-MM')
-LEFT JOIN dim.providers p ON t.TransactionBillingProviderID = p.ProviderID
+LEFT JOIN dim.vProviders p ON t.TransactionBillingProviderID = p.ProviderID
 LEFT JOIN dim.ServiceLines s on s.ServiceLineID = t.TransactionImagingType
 WHERE 1=1
 	AND t.TransactionType IN ('Charge')

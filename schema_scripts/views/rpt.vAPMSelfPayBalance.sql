@@ -25,7 +25,7 @@ FROM
 			,v.Voucher_Reporting_Period
 			,p.PracticeID
 			) sub
-	LEFT JOIN dim.Practices pp on pp.PracticeID = sub.PracticeID
+	LEFT JOIN dim.vPractices pp on pp.PracticeID = sub.PracticeID
 GROUP BY
 	sub.Account_ID
 	,sub.Department_Abbr

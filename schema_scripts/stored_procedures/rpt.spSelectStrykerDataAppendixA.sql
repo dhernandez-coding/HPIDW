@@ -51,10 +51,10 @@ PRINT 'Inserting Qualifying Visits by Procedure into temp table...'
 		,pf.VisitProcedureDescription as 'Primaryproceduredescription'
 		,NULL as 'SideOfBody'
 		,(SELECT pro.ProviderFirstName+ ' ' +pro.ProviderLastName
-        FROM dim.Providers pro 
+        FROM dim.vProviders pro 
         WHERE pro.ProviderID = v.VisitPrimaryProviderID)  as 'PrimarySurgeon' 
 		,(SELECT pro.ProviderNPI
-        FROM dim.Providers pro 
+        FROM dim.vProviders pro 
         WHERE pro.ProviderID = v.VisitPrimaryProviderID) as 'Primary surgeon NPI'
 		,v.VisitDateOfAdmission as 'DateAndTimeAdmission'
 		,vc.VisitCaseProcedureEndDatetime as 'DateOfSurgery'

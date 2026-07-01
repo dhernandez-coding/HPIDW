@@ -252,7 +252,7 @@ FROM (
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/
 												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251'))
 												
-		left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+		left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 		left join rpt.PBPaymentLag ppl ON ppl.PracticeID = pt.PracticeID
 		-- 1/4: RR joins added to include CPTs from CMS (Integris) and RVU adjustments from AMGA
 		LEFT JOIN map.RVUModifier rvu ON t.TransactionModifier1 = rvu.Modifier AND t.TransactionModifier1 <> '51'
@@ -543,7 +543,7 @@ FROM (
 --												/*All other providers without specific mapping issues due to multiple practices as defined above*/
 --												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231'))
 												
---		left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+--		left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 --		left join rpt.PBPaymentLag ppl ON ppl.PracticeID = pt.PracticeID
 --		-- 1/4: RR joins added to include CPTs from CMS (Integris) and RVU adjustments from AMGA
 --		LEFT JOIN map.RVUModifier rvu ON t.TransactionModifier1 = rvu.Modifier AND t.TransactionModifier1 <> '51'

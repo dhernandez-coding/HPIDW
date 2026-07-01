@@ -35,7 +35,7 @@ FROM [HPIDW].[fact].[VisitAvailabilityPB] va
 	LEFT JOIN dim.vPatients pt on pt.PatientID = va.VisitAvailabilityPatientID
 	LEFT JOIN dim.vLocations l on l.LocationID = va.VisitAvailabilityLocationID
 	LEFT JOIN map.PracticeDepartments pd on pd.DepartmentID = va.VisitAvailabilityDepartmentID
-	LEFT JOIN dim.Practices pr on pr.PracticeID = pd.PracticeID
+	LEFT JOIN dim.vPractices pr on pr.PracticeID = pd.PracticeID
 WHERE 1=1 
 	AND p.ProviderFullName NOT LIKE 'TPG%'
 	AND p.ProviderFullName NOT LIKE 'HPIP%'

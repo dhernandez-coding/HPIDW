@@ -1,4 +1,4 @@
-CREATE PROCEDURE stg.spHPIReloadMapTargetReferralProviders AS
+CREATE PROCEDURE  stg.spHPIReloadMapTargetReferralProviders AS
 
 /*
 CREATE TABLE map.TargetReferralProviders

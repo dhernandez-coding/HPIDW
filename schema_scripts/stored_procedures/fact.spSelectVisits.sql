@@ -1,12 +1,12 @@
 -- =============================================
 -- Author:		Eric Silvestri
--- Create date: 01/27/2023
+-- ALTER PROCEDURE27/2023
 -- Description:	Selects all Visits
 -- Change Control
 --	1. 01/27/2023 - Eric Silvestri - Initial build of procedure
 --  2. 02/01/2023 - Ryan Tisserand - Rebuilt procedure from View since it didn't have updates.  Updated view with procedure code
 -- =============================================
-CREATE PROCEDURE [fact].[spSelectVisits]
+CREATE   PROCEDURE [fact].[spSelectVisits]
 AS
 BEGIN
 SET NOCOUNT ON;
@@ -64,11 +64,11 @@ select
 from fact.Visits v 
 left join dim.Locations l on v.DataSourceID = l.DataSourceID and v.VisitLocationID = l.LocationID 
 left join dim.Departments d on v.DataSourceID = d.DataSourceID and v.VisitDepartmentID = d.DepartmentID 
-left join dim.Providers  bp on v.DataSourceID = bp.DataSourceID and v.VisitBillingProviderID = bp.ProviderID 
-left join dim.Providers  ap on v.DataSourceID = ap.DataSourceID and v.VisitActualProviderID = ap.ProviderID 
-left join dim.Providers  rp on v.DataSourceID = rp.DataSourceID and v.VisitReportProviderID = rp.ProviderID 
-left join dim.Providers  pp on v.DataSourceID = pp.DataSourceID and v.VisitPracticeProviderID = pp.ProviderID 
-left join dim.Providers  ref on v.DataSourceID = ref.DataSourceID and v.VisitReferringProviderID = ref.ProviderID 
+left join dim.vProviders  bp on v.DataSourceID = bp.DataSourceID and v.VisitBillingProviderID = bp.ProviderID 
+left join dim.vProviders  ap on v.DataSourceID = ap.DataSourceID and v.VisitActualProviderID = ap.ProviderID 
+left join dim.vProviders  rp on v.DataSourceID = rp.DataSourceID and v.VisitReportProviderID = rp.ProviderID 
+left join dim.vProviders  pp on v.DataSourceID = pp.DataSourceID and v.VisitPracticeProviderID = pp.ProviderID 
+left join dim.vProviders  ref on v.DataSourceID = ref.DataSourceID and v.VisitReferringProviderID = ref.ProviderID 
 left join dim.Payers  po on v.DataSourceID = po.DataSourceID and v.VisitOrginalPayerID = po.PayerID 
 left join dim.Payers  pb on v.DataSourceID = pb.DataSourceID and v.VisitBillingPayerID = pb.PayerID 
 left join dim.Patients  p on v.DataSourceID = p.DataSourceID and v.VisitPatientID = p.SourcePatientID

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [rpt].[spLoadBlueBookNonAssistVisits] as
+CREATE PROCEDURE  [rpt].[spLoadBlueBookNonAssistVisits] as
 
 	--@CurrentYear int 
 	--,@CurrentPeriod int 
@@ -109,9 +109,14 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 																													  OR (t.TransactionDepartmentID = '12~36' AND pp.PracticeID = '0~JCJ')
 																													  OR (t.TransactionDepartmentID = '1~19' AND pp.PracticeID = '0~JCJ2')
 																													  OR (t.TransactionDepartmentID = '1~5' AND pp.PracticeID = '0~JCJ2'))) )
+												/*This is here to handle duplicates with Joseph Broome at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1306817887') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~JCB') ) )
+												
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/
-												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251'))
-		left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887'))
+												
+		left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 	WHERE 1=1
 		AND t.TransactionBillingType = 'PB'
 		AND t.TransactionType = 'Charge'
@@ -282,8 +287,8 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 			,pp.ProviderID
 			,0 as FiscalPeriodValue
 			,GETDATE()
-		from dim.Practices p
-			left join map.PracticeProviders pp ON pp.PracticeID = p.PracticeID
+		from dim.vPractices p
+			left join map.vPracticeProviders pp ON pp.PracticeID = p.PracticeID
 			cross join (SELECT bb.ReportSection, bb.ReportGroupLevel1, max(ReportGroupLevel2) as ReportGroupLevel2
 						FROM rpt.BlueBooks bb
 						WHERE bb.ReportSection in ('Non-Assist Visits') and bb.ReportGroupLevel1 is not null
@@ -310,10 +315,10 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		
 		FROM [HPIDW].[stg].[THPVolumes] v
 		
-		LEFT JOIN dim.Practices p
+		LEFT JOIN dim.vPractices p
 		    ON p.PracticeName = v.Practice
 		
-		LEFT JOIN dim.Providers pp
+		LEFT JOIN dim.vProviders pp
 		    ON pp.ProviderSourceID = UPPER(v.Provider)
 		    AND pp.ProviderDataSourceID IN (17)
 		

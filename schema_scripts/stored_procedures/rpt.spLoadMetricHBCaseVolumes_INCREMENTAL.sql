@@ -76,7 +76,7 @@ SELECT
 	,GETDATE()							AS [UpdateDatetime] 
 FROM [HPIDW].[fact].[vVisitCases] vc
 	LEFT JOIN dim.Dates dop	ON FORMAT(vc.VisitCaseServiceDate, 'yyyy-dd-MM') = FORMAT(dop.[Date], 'yyyy-dd-MM')
-	LEFT JOIN dim.Providers p ON vc.VisitCasePrimaryProviderID = p.ProviderID
+	LEFT JOIN dim.vProviders p ON vc.VisitCasePrimaryProviderID = p.ProviderID
 	LEFT JOIN dim.ServiceLines s on s.ServiceLineID = vc.VisitCaseServiceLineID
 	LEFT JOIN fact.vVisits2 v on v.VisitID = vc.VisitCaseVisitID
 	LEFT JOIN fact.vVisitProcedures vp on vp.VisitProcedureVisitID = vc.VisitCaseVisitID

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [stg].[spHPIReloadMapPracticeDepartmentsFull] AS
+CREATE PROCEDURE  [stg].[spHPIReloadMapPracticeDepartmentsFull] AS
 /*
 CREATE TABLE map.PracticeDepartments
 (PracticeDepartmentID int identity(1,1) primary key not null
@@ -165,7 +165,7 @@ insert into map.PracticeDepartments select '0~PDM','5~43001100101','1/1/2021','1
 
 
 
-select * from dim.Practices p where p.practicename like '%maitino%'
+select * from dim.vPractices p where p.practicename like '%maitino%'
 SELECT * FROM map.vPracticeDepartments where practiceid = '0~PDM'
 SELECT * FROM map.vPracticeDepartments where practiceid = '0~nps'
 SELECT * FROM map.vPracticeDepartments where practiceid = '0~rfh'

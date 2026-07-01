@@ -30,7 +30,7 @@ select
 from fact.Budgets b
 	left join dim.BudgetTypes bt ON bt.BudgetTypeID = b.BudgetTypeID
 	left join dim.ServiceLines sl ON sl.ServiceLineID = b.BudgetServiceLineID
-	left join dim.Providers prv ON prv.ProviderID = b.BudgetProviderID
+	left join dim.vProviders prv ON prv.ProviderID = b.BudgetProviderID
 	left join dim.Specialties s ON s.SpecialtyID = b.BudgetSpecialtyID
 	left join dim.PayerGroups pg ON pg.PayerGroupID = b.BudgetPayerGroupID
 	left join dim.Locations l ON l.LocationID = b.BudgetLocationID

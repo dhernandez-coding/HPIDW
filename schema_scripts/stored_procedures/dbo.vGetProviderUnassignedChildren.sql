@@ -30,7 +30,7 @@ BEGIN
       ,p.[ProviderIsActive]
       ,Cast(p.[ProviderUpdatedDateTime] as Date) as ProviderUpdatedDateTime
    
-   from dim.Providers p
+   from dim.vProviders p
    
 	Where
 	

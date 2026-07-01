@@ -1,4 +1,4 @@
-CREATE PROCEDURE [rpt].[spLoadMetricTransactionsPB_INCREMENTAL]	AS
+CREATE PROCEDURE  [rpt].[spLoadMetricTransactionsPB_INCREMENTAL]	AS
 BEGIN		
 	-- =============================================
 	-- Author:		Robert Beaird
@@ -110,21 +110,21 @@ LEFT JOIN dim.Dates drp
 	ON DATEFROMPARTS(LEFT(t.TransactionReportPeriodDate,4),RIGHT(t.TransactionReportPeriodDate,2),1) = drp.[Date]
 --LEFT JOIN fact.Accounts a
 --	ON t.TransactionAccountID = a.AccountID
---LEFT JOIN map.PracticeProviders ppt
+--LEFT JOIN map.vPracticeProviders ppt
 --	ON t.TransactionBillingProviderID = ppt.ProviderID
---LEFT JOIN map.PracticeProviders ppa
+--LEFT JOIN map.vPracticeProviders ppa
 --	ON a.AccountPrimaryProviderID = ppa.ProviderID
 --LEFT JOIN map.PracticeDepartments pd
 --	ON t.TransactionDepartmentID = pd.DepartmentID
 --LEFT JOIN map.ProviderLinking pl
 --	ON t.TransactionBillingProviderID = pl.ChildProviderID
---LEFT JOIN map.PracticeProviders ppy
+--LEFT JOIN map.vPracticeProviders ppy
 --	ON pl.ParentProviderID = ppy.ProviderID 
 --LEFT JOIN dim.Departments d
 --	on t.TransactionDepartmentID = d.DepartmentID
 --LEFT JOIN dim.datasources ds
 --	ON t.TransactionDataSource = ds.DataSourceName
-LEFT JOIN dim.Providers p
+LEFT JOIN dim.vProviders p
 	ON t.TransactionBillingProviderID = p.ProviderID
 
 

@@ -3,7 +3,7 @@ CREATE VIEW  map.vTHPClass AS
 
 		SELECT DISTINCT 
 		t.class,
-		CASE WHEN t.Class in (SELECT ProviderSourceID from dim.Providers p WHERE p.ProviderDataSourceID = 18) THEN t.Class
+		CASE WHEN t.Class in (SELECT ProviderSourceID from dim.vProviders p WHERE p.ProviderDataSourceID = 18) THEN t.Class
 			ELSE NULL END AS FixedClass,
 		t.Practice
 		FROM [HPIDW].[stg].[THPTransactions] t

@@ -1,17 +1,17 @@
 -- =============================================
 -- Author:		Eric Silvestri
--- Create date: 05/28/2025
+-- ALTER PROCEDURE28/2025
 -- Description:	Extracts, Transforms and Loads Provider Data from APM Source System into a dim Table
 -- Change Control
 -- =============================================
 
-CREATE PROCEDURE [stg].[spAPMCustomersReloadDimProvidersFull] AS
+CREATE   PROCEDURE [stg].[spAPMCustomersReloadDimProvidersFull] AS
 BEGIN
 SET NOCOUNT ON;
 
-delete from dim.Providers where ProviderDataSourceID = 12
+delete from dim.vProviders where ProviderDataSourceID = 12
 
-insert into dim.Providers
+insert into dim.vProviders
 (
 	ProviderID,
 	ProviderDataSourceID,

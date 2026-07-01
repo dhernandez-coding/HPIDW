@@ -6,7 +6,7 @@ SELECT [PracticeProviderID]
 	  ,pr.PracticeName
       ,pp.[ProviderID]
 	  ,p.ProviderDataSourceID
-	  ,pl.ParentProviderID
+	  ,pl.ParentProviderID as ParentProviderID
 	  ,CONCAT(p.ProviderLastName,', ',p.ProviderFirstName,' ',p.ProviderMiddleInitial) AS ProviderFullName
 	  ,p.ProviderFirstName
 	  ,p.ProviderMiddleInitial

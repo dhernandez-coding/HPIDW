@@ -1,4 +1,4 @@
---CREATE TABLE map.EpicPracticeProviders
+--ALTER PROCEDURE.EpicPracticeProviders
 --(
 --EpicPracticeProviderID int identity(1,1) not null
 --,ProviderID varchar(100)
@@ -8,7 +8,7 @@
 
 --SELECT p.ProviderFullName,pp.* FROM map.EpicPracticeProviders pp LEFT JOIN dim.vProviders p ON p.providerid = pp.providerid
 
-CREATE PROCEDURE [stg].[spHPIReloadMapEpicPracticeProviders] as
+CREATE   PROCEDURE [stg].[spHPIReloadMapEpicPracticeProviders] as
 /*
 TRUNCATE TABLE map.EpicPracticeProviders
 INSERT INTO map.EpicPracticeProviders SELECT '5~102495','0~CSH',1,0,1,0,GETDATE() --Provider: HUME, CHRISTOPHER S; Practice: Dr. Christopher Hume
@@ -3632,7 +3632,7 @@ INSERT INTO map.EpicPracticeProviders
 		,getdate() as EpicPracticeProviderUpdatedDatetime
 	from fact.Transactions2 t2
 		left join dim.vDepartments d ON d.DepartmentID = t2.TransactionDepartmentID
-		left join dim.Practices pt ON pt.PracticeID = d.PracticeID
+		left join dim.vPractices pt ON pt.PracticeID = d.PracticeID
 		left join dim.vProviders p ON p.ProviderID = t2.TransactionBillingProviderID
 	where 1=1
 		and t2.TransactionBillingType = 'PB'
@@ -3670,6 +3670,6 @@ INSERT INTO map.EpicPracticeProviders
 
 
 
-	--select * from dim.Practices where PracticeName like 'Lance%'
+	--select * from dim.vPractices where PracticeName like 'Lance%'
 	--SELECT * FROM DIM.VPROVIDERS P WHERE P.ProviderFullName LIKE '%lEINEN, J%'
 GO

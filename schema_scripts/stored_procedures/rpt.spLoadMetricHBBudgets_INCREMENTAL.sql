@@ -76,7 +76,7 @@ SELECT
 	,GETDATE()							AS [UpdateDatetime] 
 FROM [HPIDW].[fact].[vBudgets] b
 	LEFT JOIN dim.Dates dop	ON FORMAT(b.BudgetDate, 'yyyy-dd-MM') = FORMAT(dop.[Date], 'yyyy-dd-MM')
-	LEFT JOIN dim.Providers p ON b.BudgetProviderID	 = p.ProviderID
+	LEFT JOIN dim.vProviders p ON b.BudgetProviderID	 = p.ProviderID
 
 WHERE 1=1
 	AND dop.[Date] between @QueryBeginDate and @QueryEndDate

@@ -79,7 +79,7 @@ FROM [HPIDW].[fact].[CaseSchedule] cs
 	LEFT JOIN dim.ServiceLines s on s.ServiceLineID = vc.VisitCaseServiceLineID
 	LEFT JOIN fact.vVisits2 v on v.VisitID = vc.VisitCaseVisitID
 	LEFT JOIN dim.Dates dop	ON FORMAT(vc.VisitCaseServiceDate, 'yyyy-dd-MM') = FORMAT(dop.[Date], 'yyyy-dd-MM')
-	LEFT JOIN dim.Providers p ON cs.CaseScheduleProviderID = p.ProviderID
+	LEFT JOIN dim.vProviders p ON cs.CaseScheduleProviderID = p.ProviderID
 
 
 WHERE 1=1

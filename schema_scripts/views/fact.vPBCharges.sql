@@ -1,4 +1,4 @@
-CREATE view [fact].[vPBCharges] as
+CREATE VIEW [fact].[vPBCharges] as
 
 /*
 Change Control:
@@ -231,7 +231,7 @@ FROM (
 												  OR t.TransactionBillingProviderID not in ('1~19898','5~126867','1~19711','5~125582','5~122305','5~104092','5~120997','1~14003','1~18356','1~13986'))
 											--AND pp.ProviderID = t.TransactionBillingProviderID
 		*/		
-		left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
+		left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 		left join rpt.PBPaymentLag ppl ON ppl.PracticeID = pt.PracticeID
 		-- 1/4: RR joins added to include CPTs from CMS (Integris) and RVU adjustments from AMGA
 		LEFT JOIN map.RVUModifier rvu ON t.TransactionModifier1 = rvu.Modifier AND t.TransactionModifier1 <> '51'

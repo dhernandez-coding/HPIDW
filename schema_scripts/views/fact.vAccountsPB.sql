@@ -1,4 +1,4 @@
-CREATE VIEW [fact].[vAccountsPB]
+CREATE VIEW  [fact].[vAccountsPB]
 AS
 SELECT  a.AccountID, 
 		a.AccountDataSourceID,
@@ -43,9 +43,9 @@ FROM  fact.Accounts AS a
 		LEFT OUTER JOIN dim.PayerPlans AS pp ON pp.PayerPlanID = a.AccountPrimaryPayerPlanID 
 		LEFT OUTER JOIN dim.DataSources AS ds ON ds.DataSourceID = a.AccountDataSourceID 
 		LEFT OUTER JOIN map.PracticeDepartments AS pd ON pd.DepartmentID = a.AccountDepartmentID 
-		LEFT OUTER JOIN map.PracticeProviders AS pp2 ON pp2.ProviderID = a.AccountPrimaryProviderID AND pp2.PracticeProviderEffectiveDate <= a.AccountDateOfClosing AND 
+		LEFT OUTER JOIN map.vPracticeProviders AS pp2 ON pp2.ProviderID = a.AccountPrimaryProviderID AND pp2.PracticeProviderEffectiveDate <= a.AccountDateOfClosing AND 
                          pp2.PracticeProviderEndDate >= a.AccountDateOfClosing 
-		LEFT OUTER JOIN dim.Practices AS pt ON pt.PracticeID = COALESCE (pd.PracticeID, pp2.PracticeID)
+		LEFT OUTER JOIN dim.vPractices AS pt ON pt.PracticeID = COALESCE (pd.PracticeID, pp2.PracticeID)
 		LEFT OUTER JOIN (SELECT
 							CONCAT('1~',ca.Voucher_Number) as VoucherNumber,
 							sum(ca.Self_Pay_Balance) SelfPayBalance

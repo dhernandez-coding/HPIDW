@@ -94,7 +94,7 @@ FROM
 	  --,* 
 	  from CORVMAP22.TPG.dbo.GL20000 t 
 		left join stg.vGLAccounts a ON a.GLAccountSourceID = CAST(t.ACTINDX AS VARCHAR(100))
-		left join dim.Practices p ON p.PracticeSourceID = a.GLAccountPractice
+		left join dim.vPractices p ON p.PracticeSourceID = a.GLAccountPractice
 	  where 1=1
 	  --AND a.GLAccountDescriptionID like '3%'
 	  --AND t.REFRENCE like '%EOM ALLOC%'
@@ -151,7 +151,7 @@ FROM
 			  --,t.PERDBLNC
 		from CORVMAP22.TPG.dbo.GL11110 t
 			left join stg.vGLAccounts a ON a.GLAccountSourceID = CAST(t.ACTINDX AS VARCHAR(100))
-			left join dim.Practices p ON p.PracticeSourceID = a.GLAccountPractice
+			left join dim.vPractices p ON p.PracticeSourceID = a.GLAccountPractice
 		where 1=1
 		AND p.PracticeID is not null
 		AND t.MNACSGMT in ('3004','3010') 
@@ -233,7 +233,7 @@ FROM (
 		+ sum(case when bb.ReportGroupLevel1 = 'General Set Asides' THEN bb.FiscalPeriodValue ELSE 0 END)
 		+ sum(case when bb.ReportGroupLevel1 = 'Asset Purchases' THEN bb.FiscalPeriodValue ELSE 0 END) as 'Ending Balance'
 	from rpt.BlueBooks bb
-		left join dim.Practices p ON p.PracticeID = bb.PracticeID
+		left join dim.vPractices p ON p.PracticeID = bb.PracticeID
 	where 1=1
 		AND bb.ReportSection IN ('Cash','Revenue','Expenses')
 		AND bb.FiscalYear = @PreviousPeriodYear
@@ -292,7 +292,7 @@ FROM
 	  --,* 
 	  from CORVMAP22.TPG.dbo.GL20000 t 
 		left join stg.vGLAccounts a ON a.GLAccountSourceID = CAST(t.ACTINDX AS VARCHAR(100))
-		left join dim.Practices p ON p.PracticeSourceID = a.GLAccountPractice
+		left join dim.vPractices p ON p.PracticeSourceID = a.GLAccountPractice
 	  where 1=1
 	  --AND a.GLAccountDescriptionID like '3%'
 	  AND t.REFRENCE like '%EOM ALLOC%'
@@ -384,7 +384,7 @@ FROM (
 		+ sum(case when bb.ReportGroupLevel1 = 'General Set Asides' THEN bb.FiscalPeriodValue ELSE 0 END)
 		+ sum(case when bb.ReportGroupLevel1 = 'Asset Purchases' THEN bb.FiscalPeriodValue ELSE 0 END) as 'Ending Balance'
 	from rpt.BlueBooks bb
-		left join dim.Practices p ON p.PracticeID = bb.PracticeID
+		left join dim.vPractices p ON p.PracticeID = bb.PracticeID
 	where 1=1
 		AND bb.ReportSection IN ('Cash','Revenue','Expenses')
 		AND bb.FiscalYear = @PreviousPeriodYear
@@ -465,7 +465,7 @@ FROM (
 		+ sum(case when bb.ReportGroupLevel1 = 'General Set Asides' THEN bb.FiscalPeriodValue ELSE 0 END)
 		+ sum(case when bb.ReportGroupLevel1 = 'Asset Purchases' THEN bb.FiscalPeriodValue ELSE 0 END) as 'Ending Balance'
 	from rpt.BlueBooks bb
-		left join dim.Practices p ON p.PracticeID = bb.PracticeID
+		left join dim.vPractices p ON p.PracticeID = bb.PracticeID
 	where 1=1
 		AND bb.ReportSection IN ('Cash','Revenue','Expenses')
 		AND bb.FiscalYear = @PreviousPeriodYear
@@ -525,7 +525,7 @@ FROM
 	  --,* 
 	  from CORVMAP22.TPG.dbo.GL20000 t 
 		left join stg.vGLAccounts a ON a.GLAccountSourceID = t.ACTINDX
-		left join dim.Practices p ON p.PracticeSourceID = a.GLAccountPractice
+		left join dim.vPractices p ON p.PracticeSourceID = a.GLAccountPractice
 	  where 1=1
 	  --AND a.GLAccountDescriptionID like '3%'
 	  AND t.REFRENCE like '%EOM ALLOC%'

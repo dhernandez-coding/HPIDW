@@ -1,4 +1,4 @@
-CREATE PROCEDURE [rpt].[spLoadBlueBookAR] 
+CREATE PROCEDURE  [rpt].[spLoadBlueBookAR] 
 
 	--@CurrentYear int 
 	--,@CurrentPeriod int 
@@ -95,7 +95,7 @@ INSERT INTO rpt.BlueBooks
 		') tx
 			left join dim.Departments d ON d.DepartmentID = CONCAT('5~',tx.DEPARTMENT_ID)
 			left join map.PracticeDepartments pd ON pd.DepartmentID = CONCAT('5~',tx.DEPARTMENT_ID)
-			left join dim.Practices pt ON pt.PracticeID = pd.PracticeID
+			left join dim.vPractices pt ON pt.PracticeID = pd.PracticeID
 			left join dim.Payers py ON py.PayerID = CONCAT('5~',ISNULL(tx.PAYOR_ID,'0')) /*If no assigned Payor then assign to self-pay*/
 			left join dim.PayerGroups pg ON pg.PayerGroupID = py.PayerGroupID
 		where 1=1 
@@ -138,7 +138,7 @@ INSERT INTO rpt.BlueBooks
 	left join [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].CLARITY.[ORGFILTER].ARPB_TX_MODERATE tm ON tm.TX_ID = tx.TX_ID	
 	left join dim.Departments d ON d.DepartmentID = CONCAT('5~',tx.DEPARTMENT_ID)
 	left join map.PracticeDepartments pd ON pd.DepartmentID = CONCAT('5~',tx.DEPARTMENT_ID)
-	left join dim.Practices pt ON pt.PracticeID = pd.PracticeID
+	left join dim.vPractices pt ON pt.PracticeID = pd.PracticeID
 	left join dim.Payers py ON py.PayerID = CONCAT('5~',tx.Payor_ID)
 	left join dim.PayerGroups pg ON pg.PayerGroupID = py.PayerGroupID
 
@@ -242,10 +242,10 @@ INSERT INTO rpt.BlueBooks
 				+ ISNULL(a.Posted_Misc_Debits,0)) > 0 /*Exclude Credit and Zero Balances*/
 			AND a.Ins_Rpt_Class_Description <> 'Collections' /*Exclude Bad Debt*/
 		) sub
-		left join map.PracticeProviders pp ON pp.ProviderID = CONCAT('1~',sub.Billing_Prov_Practitioner_ID)
+		left join map.vPracticeProviders pp ON pp.ProviderID = CONCAT('1~',sub.Billing_Prov_Practitioner_ID)
 											AND pp.PracticeProviderEffectiveDate <=  DATEFROMPARTS(@CurrentYear, @CurrentPeriod, 1)
 											AND pp.PracticeProviderEndDate >= DATEFROMPARTS(@CurrentYear, @CurrentPeriod, 1)
-		left join dim.Practices pt ON pt.PracticeID = pp.PracticeID
+		left join dim.vPractices pt ON pt.PracticeID = pp.PracticeID
 		left join dim.Payers py ON py.PayerID =  CONCAT('1~',ISNULL(convert(varchar,sub.Carrier_ID),'SELF')) /*If no assigned Payor then assign to self-pay*/
 		left join dim.PayerGroups pg ON pg.PayerGroupID = py.PayerGroupID
 	GROUP BY 
@@ -342,7 +342,7 @@ INSERT INTO rpt.BlueBooks
 				+ ISNULL(a.Posted_Misc_Debits,0)) > 0 /*Exclude Credit and Zero Balances*/
 			AND a.Ins_Rpt_Class_Description <> 'Collections' /*Exclude Bad Debt*/
 		) sub
-		LEFT JOIN map.PracticeProviders pp 	 ON pp.ProviderID = CONCAT('12~',sub.Billing_Prov_Practitioner_ID)
+		LEFT JOIN map.vPracticeProviders pp 	 ON pp.ProviderID = CONCAT('12~',sub.Billing_Prov_Practitioner_ID)
 				 AND pp.PracticeProviderEffectiveDate <= DATEFROMPARTS(@CurrentYear, @CurrentPeriod, 1)
 				 AND pp.PracticeProviderEndDate >= DATEFROMPARTS(@CurrentYear, @CurrentPeriod, 1)
 				 -- ADD THIS TO PREVENT DUPLICATE AR FOR OPCL AND JRS 04/03/2026 DH
@@ -353,7 +353,7 @@ INSERT INTO rpt.BlueBooks
 				          (sub.Department_ID = '46' AND pp.PracticeID = '0~OPCL')
 				        )) 
 				 )
-		left join dim.Practices pt ON pt.PracticeID = pp.PracticeID
+		left join dim.vPractices pt ON pt.PracticeID = pp.PracticeID
 		left join dim.Payers py ON py.PayerID =  CONCAT('12~',ISNULL(convert(varchar,sub.Carrier_ID),'SELF')) /*If no assigned Payor then assign to self-pay*/
 		left join dim.PayerGroups pg ON pg.PayerGroupID = py.PayerGroupID
 	GROUP BY 

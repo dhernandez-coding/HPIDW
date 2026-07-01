@@ -175,7 +175,7 @@ BEGIN
     LEFT JOIN HPIDW.dim.vDepartments d ON d.DepartmentID = t.TransactionDepartmentID
     LEFT JOIN HPIDW.dim.vProviders p ON p.ProviderID = t.TransactionBillingProviderID
     LEFT JOIN HPIDW.dim.vPayers pp ON pp.PayerID = t.TransactionPayerID
-    LEFT JOIN HPIDW.dim.Practices pr ON pr.PracticeID = t.TransactionPracticeID
+    LEFT JOIN HPIDW.dim.vPractices pr ON pr.PracticeID = t.TransactionPracticeID
     WHERE d.DepartmentName LIKE '%HPI Physicians, LLC%' OR d.DepartmentID = '1~24' OR d.DepartmentName = 'HPI BILLING OFFICE'
 		AND t.TransactionDataSource = 'APM' -- APM
     GROUP BY
@@ -339,7 +339,7 @@ BEGIN
     LEFT JOIN HPIDW.dim.vDepartments d ON d.DepartmentID = t.TransactionDepartmentID
     LEFT JOIN HPIDW.dim.vProviders p ON p.ProviderID = t.TransactionBillingProviderID
     LEFT JOIN HPIDW.dim.vPayers pp ON pp.PayerID = t.TransactionPayerID
-    LEFT JOIN HPIDW.dim.Practices pr ON pr.PracticeID = t.TransactionPracticeID
+    LEFT JOIN HPIDW.dim.vPractices pr ON pr.PracticeID = t.TransactionPracticeID
     WHERE d.DepartmentName LIKE '%HPIP%' OR d.DepartmentID = '1~24' OR d.DepartmentName = 'HPI BILLING OFFICE'
 		AND t.TransactionDataSource = 'EPIC' --EPIC
     GROUP BY

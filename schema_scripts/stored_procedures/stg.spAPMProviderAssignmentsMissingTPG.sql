@@ -1,9 +1,9 @@
 -- =============================================
 -- Author:		Ryan Tisserand
--- Create date: 10/21/2022
+-- ALTER PROCEDURE21/2022
 -- Description:	Not used, just to show missing APM values from TPG file
 -- =============================================
-CREATE PROCEDURE stg.spAPMProviderAssignmentsMissingTPG
+CREATE   PROCEDURE stg.spAPMProviderAssignmentsMissingTPG
 AS
 BEGIN
 SET NOCOUNT ON;
@@ -259,7 +259,7 @@ select
 	pa.*,
 	p.*
 from @ProviderAssignments pa
-left join dim.Providers p on pa.ProviderAbbreviation = p.ProviderAbbreviation
+left join dim.vProviders p on pa.ProviderAbbreviation = p.ProviderAbbreviation
 where p.ProviderID is null
 
 END

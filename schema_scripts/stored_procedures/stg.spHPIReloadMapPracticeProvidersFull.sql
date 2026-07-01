@@ -1,10 +1,10 @@
-CREATE PROCEDURE [stg].[spHPIReloadMapPracticeProvidersFull] as
+CREATE PROCEDURE  [stg].[spHPIReloadMapPracticeProvidersFull] as
 		
 /* 
 -- =============================================
 -- Author:		Chris Cross
 -- Create date: Nov 20 2024  5:04PM
--- Edit date:   Full reload for map.PracticeProviders from HPI App
+-- Edit date:   Full reload for map.vPracticeProviders from HPI App
 -- ============================================= 
 */
 BEGIN

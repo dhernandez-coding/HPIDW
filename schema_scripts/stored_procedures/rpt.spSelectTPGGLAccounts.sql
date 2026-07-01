@@ -121,10 +121,10 @@ UNION ALL
 ) sub  
 	inner join stg.vGLAccounts a ON a.GLAccountSourceID = sub.GLAccountSourceID 
 								--AND (@Practice = '0' /*0 - All*/ OR a.GLAccountPractice = @Practice)
-	left join dim.Practices p ON p.PracticeSourceID = a.GLAccountPractice
-	left join dim.Providers prv ON prv.ProviderDataSourceID = 10 AND prv.ProviderSourceID = a.GLAccountReportingProvider
+	left join dim.vPractices p ON p.PracticeSourceID = a.GLAccountPractice
+	left join dim.vProviders prv ON prv.ProviderDataSourceID = 10 AND prv.ProviderSourceID = a.GLAccountReportingProvider
 		--left join map.ProviderLinking pl on prv.ProviderID = pl.ChildProviderID
-		--left join dim.Providers prv2 on pl.ParentProviderID = prv2.ProviderID
+		--left join dim.vProviders prv2 on pl.ParentProviderID = prv2.ProviderID
 
 	left join (
 	select 
@@ -175,7 +175,7 @@ where 1=1
 	
 
 
-	--select * from dim.Practices p where p.PracticeIsActive = 1
+	--select * from dim.vPractices p where p.PracticeIsActive = 1
 
 	--select * from HPIDW.rpt.vGLTransactionsCurrentYear where glaccountnumber = '5200-01-08-054-000'                                                                                                             '
 GO

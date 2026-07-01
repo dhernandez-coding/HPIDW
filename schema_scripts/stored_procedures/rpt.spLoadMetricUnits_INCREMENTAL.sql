@@ -83,7 +83,7 @@ LEFT JOIN dim.Dates dop
 --	ON FORMAT(GETDATE(), 'yyyy-dd-MM') = FORMAT(gd.[Date], 'yyyy-dd-MM')
 --LEFT JOIN dim.datasources ds
 --	ON t.TransactionDataSource = ds.DataSourceName
-LEFT JOIN dim.providers p
+LEFT JOIN dim.vProviders p
 	ON t.TransactionBillingProviderID = p.ProviderID
 --LEFT JOIN fact.vVisitCases vc
 --	ON t.TransactionVisitID = vc.VisitCaseVisitID
