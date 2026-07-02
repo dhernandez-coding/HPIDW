@@ -579,8 +579,11 @@ UPDATE dim.Practices SET PracticeIsActive = 0, PracticeUpdatedDatetime = GETDATE
 /*Updated 5/1/2026 - Set PDM to HPIP*/
 UPDATE dim.Practices SET PracticeCompany = 'HPIP', PracticeDataSource = 'EPIC', PracticeUpdatedDatetime = getdate() WHERE PracticeID = '0~PDM'
 
-/*Updated 6/2/206 - Set Kelley to Inactive*/
+/*Updated 6/2/2026 - Set Kelley to Inactive*/
 UPDATE dim.Practices SET PracticeIsActive = 0, PracticeUpdatedDatetime = GETDATE() WHERE PracticeID = '0~GPK'
+
+/*Updated 7/1/2026 - Set Unsell to Inactive*/
+UPDATE dim.Practices SET PracticeIsActive = 0, PracticeUpdatedDatetime = GETDATE() where PracticeID = '0~RSU'
 
 
 select * from dim.Practices p where p.practicename like '%kell%'

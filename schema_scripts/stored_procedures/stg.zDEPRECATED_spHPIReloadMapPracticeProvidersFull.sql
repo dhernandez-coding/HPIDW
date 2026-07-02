@@ -843,14 +843,19 @@ INSERT INTO map.PracticeProviders SELECT '0~PDM','5~103250','PDM',1,'3/1/2026','
 /*6.2.26 - Per Michael - Updates gl codes for April - Changed Other Provider record for DUNKLEBERGER, LLOYD S from 058 to 000*/
 UPDATE map.PracticeProviders SET PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~PBJ' and ProviderID = '1~18356'
 
+/*7.1.26 - Per Nick - Updates to TDT - Remove Moss from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~TDT' and ProviderID = '1~18624'
+
+/*7.1.26 Added Kenzie V. Hart to ACC*/
+INSERT INTO map.PracticeProviders SELECT '0~ACC','5~P1040276','KVH',0,'5/26/2026','12/31/2099',1,getdate(),1,0,NULL,1,1,'PA',11,130,2
 
 
-	select * from map.vPracticeProviders p where p.PracticeID = '0~TDT'
+	select * from map.vPracticeProviders p where p.PracticeID = '0~acc'
 	
 	select * from map.vPracticeProviders p where p.PracticeID = '0~NRJ'
 	select * from dim.Practices p where p.PracticeName like '%Harris%'
 	
-select * from dim.vProviders p where p.ProviderFullName like '%maitino%'
+select * from dim.vProviders p where p.ProviderFullName like '%HART, KEN%'
 
 	select * from dim.vProviders p where p.providerdatasourceid = 10 and providerfullname like '%Nguyen%' order by Providerupdateddatetime
 

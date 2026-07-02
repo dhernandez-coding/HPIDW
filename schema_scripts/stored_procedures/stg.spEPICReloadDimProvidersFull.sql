@@ -121,9 +121,9 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
         BEGIN TRANSACTION;
             PRINT 'At least 10 records found. Proceeding to delete and reload.';
             
-            DELETE FROM dim.vProviders WHERE ProviderDataSourceID = 5;
+            DELETE FROM dim.Providers WHERE ProviderDataSourceID = 5;
 
-            INSERT INTO dim.vProviders (
+            INSERT INTO dim.Providers (
                 ProviderID,
                 ProviderDataSourceID,
                 ProviderSourceID,
@@ -268,9 +268,9 @@ END;
 --        BEGIN TRANSACTION;
 --            PRINT 'At least 10 records found. Proceeding to delete and reload.';
             
---            DELETE FROM dim.vProviders WHERE ProviderDataSourceID = 5;
+--            DELETE FROM dim.Providers WHERE ProviderDataSourceID = 5;
 
---            INSERT INTO dim.vProviders (
+--            INSERT INTO dim.Providers (
 --                ProviderID,
 --                ProviderDataSourceID,
 --                ProviderSourceID,

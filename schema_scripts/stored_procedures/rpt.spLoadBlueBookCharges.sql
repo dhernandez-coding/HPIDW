@@ -200,35 +200,7 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 
 		
 	UNION ALL
-
-	--SELECT
-	--YEAR(v.Month) as FiscalYear
-	--,MONTH(v.Month) as FiscalPeriod
-	--,FORMAT(DATEFROMPARTS(YEAR(v.Month) ,MONTH(v.Month),1),'MMM-yy') AS FiscalYearPeriod 
- --   ,'Charges' AS ReportSection
- --   ,'Other Visits' AS ReportGroupLevel1
- --   ,'Other Commercial' AS ReportGroupLevel2
- --   ,'1_Charge' AS ReportGroupLevel3
- --   ,NULL AS ReportGroupLevel4
- --   ,p.PracticeID
- --   ,pl.ParentProviderID
- --   ,v.Charges AS FiscalPeriodValue
- --   ,GETDATE() AS UpdatedDateTime
-
-	--FROM [HPIDW].[stg].[THPVolumes] v
-	
-	--LEFT JOIN dim.vPractices p
-	--    ON p.PracticeName = v.Practice
-	
-	--LEFT JOIN dim.vProviders pp
-	--    ON pp.ProviderSourceID = UPPER(v.Provider)
-	--    AND pp.ProviderDataSourceID IN (17)
-	--left join map.ProviderLinking pl 
-	--	ON pl.ChildProviderID = pp.ProviderID
-	--WHERE v.Charges IS NOT NULL 
-	--	AND YEAR(v.Month) >= @CurrentYear - 1  
-
-
+/* THP DATA */ 
 
 	SELECT
      YEAR(v.Month) as FiscalYear
@@ -240,30 +212,65 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
     ,'1_Charge' AS ReportGroupLevel3
     ,NULL AS ReportGroupLevel4
     ,p.PracticeID
-    ,ISNULL(pr.ProviderID, 'UNKNOWN') AS ReportingProviderID
+    ,ISNULL(pl.ParentProviderID, 'UNKNOWN') AS ReportingProviderID
     ,SUM(v.Charges) AS FiscalPeriodValue
     ,GETDATE() AS UpdatedDateTime
 FROM [HPIDW].[stg].[THPVolumes] v
-LEFT JOIN dim.vPractices p
-    ON p.PracticeID = '0~' + LTRIM(RTRIM(v.Practice))
-OUTER APPLY (
-    SELECT TOP 1 pl.ParentProviderID AS ProviderID
-    FROM dim.vProviders pp
-    LEFT JOIN map.ProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
-    WHERE UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
-      AND pp.ProviderDataSourceID IN (17)
-    ORDER BY pp.ProviderDataSourceID DESC, pp.ProviderID
-) pr
+LEFT JOIN dim.Providers pp
+    ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
+    AND pp.ProviderDataSourceID = 17
+LEFT JOIN map.ProviderLinking pl 
+    ON pl.ChildProviderID = pp.ProviderID
+LEFT JOIN map.PracticeProviders mpp
+    ON mpp.ProviderID = pp.ProviderID
+LEFT JOIN dim.Practices p
+    ON p.PracticeID = ISNULL(mpp.PracticeID, v.Practice)
 WHERE v.Charges IS NOT NULL 
     AND v.Month >= @StartDate
     AND v.Month < DATEADD(MONTH, 1, @EndDate)
-    AND p.PracticeID IN ('0~THP','0~CVFC')
+    AND (p.PracticeID LIKE '0~THP%' OR p.PracticeID = '0~CVFC')
 GROUP BY
     YEAR(v.Month),
     MONTH(v.Month),
     FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy'),
     p.PracticeID,
-    ISNULL(pr.ProviderID, 'UNKNOWN')
+    ISNULL(pl.ParentProviderID, 'UNKNOWN')
+
+
+--	SELECT
+--     YEAR(v.Month) as FiscalYear
+--    ,MONTH(v.Month) as FiscalPeriod
+--    ,FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy') AS FiscalYearPeriod
+--    ,'Charges' AS ReportSection
+--    ,'Other Visits' AS ReportGroupLevel1
+--    ,'Other Commercial' AS ReportGroupLevel2
+--    ,'1_Charge' AS ReportGroupLevel3
+--    ,NULL AS ReportGroupLevel4
+--    ,p.PracticeID
+--    ,ISNULL(pr.ProviderID, 'UNKNOWN') AS ReportingProviderID
+--    ,SUM(v.Charges) AS FiscalPeriodValue
+--    ,GETDATE() AS UpdatedDateTime
+--FROM [HPIDW].[stg].[THPVolumes] v
+--LEFT JOIN dim.vPractices p
+--    ON p.PracticeID = '0~' + LTRIM(RTRIM(v.Practice))
+--OUTER APPLY (
+--    SELECT TOP 1 pl.ParentProviderID AS ProviderID
+--    FROM dim.vProviders pp
+--    LEFT JOIN map.ProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
+--    WHERE UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
+--      AND pp.ProviderDataSourceID IN (17)
+--    ORDER BY pp.ProviderDataSourceID DESC, pp.ProviderID
+--) pr
+--WHERE v.Charges IS NOT NULL 
+--    AND v.Month >= @StartDate
+--    AND v.Month < DATEADD(MONTH, 1, @EndDate)
+--    AND p.PracticeID IN ('0~THP','0~CVFC')
+--GROUP BY
+--    YEAR(v.Month),
+--    MONTH(v.Month),
+--    FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy'),
+--    p.PracticeID,
+--    ISNULL(pr.ProviderID, 'UNKNOWN')
 
 
 		) sub

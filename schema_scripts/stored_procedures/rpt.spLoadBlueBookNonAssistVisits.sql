@@ -297,6 +297,7 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 
 		UNION ALL
 
+		/* THP DATA */ 
 		SELECT
 		    YEAR(v.Month) AS FiscalYear,
 		    MONTH(v.Month) AS FiscalPeriod,
@@ -308,19 +309,25 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		    NULL AS ReportGroupLevel3,
 		
 		    p.PracticeID,
-		    pp.ProviderID,
+		    ISNULL(pl.ParentProviderID, 'UNKNOWN'),
 		
 		    SUM(v.Claim_Count) AS FiscalPeriodValue,
 		    GETDATE() AS UpdatedDatetime
 		
 		FROM [HPIDW].[stg].[THPVolumes] v
 		
-		LEFT JOIN dim.vPractices p
-		    ON p.PracticeName = v.Practice
+		LEFT JOIN dim.Providers pp
+		    ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
+		    AND pp.ProviderDataSourceID = 17
 		
-		LEFT JOIN dim.vProviders pp
-		    ON pp.ProviderSourceID = UPPER(v.Provider)
-		    AND pp.ProviderDataSourceID IN (17)
+		LEFT JOIN map.ProviderLinking pl 
+		    ON pl.ChildProviderID = pp.ProviderID
+		
+		LEFT JOIN map.PracticeProviders mpp
+		    ON mpp.ProviderID = pp.ProviderID
+		
+		LEFT JOIN dim.Practices p
+		    ON p.PracticeID = ISNULL(mpp.PracticeID, v.Practice)
 		
 		WHERE v.Claim_Count IS NOT NULL
 		  AND v.Month >= @StartDate
@@ -331,7 +338,7 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		    MONTH(v.Month),
 		    FORMAT(v.Month,'MMM-yy'),
 		    p.PracticeID,
-		    pp.ProviderID
+		    ISNULL(pl.ParentProviderID, 'UNKNOWN')
 
 
 		) sub

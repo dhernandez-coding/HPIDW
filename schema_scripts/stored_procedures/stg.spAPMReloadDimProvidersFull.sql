@@ -11,9 +11,9 @@ AS
 BEGIN
 SET NOCOUNT ON;
 
-delete from dim.vProviders where ProviderDataSourceID = 1
+delete from dim.Providers where ProviderDataSourceID = 1
 
-insert into dim.vProviders
+insert into dim.Providers
 (
 	ProviderID,
 	ProviderDataSourceID,

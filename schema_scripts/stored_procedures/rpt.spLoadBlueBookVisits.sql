@@ -330,7 +330,70 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		UNION ALL
 	
 	/* Union for Visits THP */
+
+
 	SELECT
+		 YEAR(v.Month) as FiscalYear
+		,MONTH(v.Month) as FiscalPeriod
+		,FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy') AS FiscalYearPeriod
+		,'Visits' AS ReportSection
+		,'Office Visits' AS ReportGroupLevel1
+		,NULL AS ReportGroupLevel2
+		,NULL AS ReportGroupLevel3
+		,NULL AS ReportGroupLevel4
+		,p.PracticeID
+		,ISNULL(pl.ParentProviderID, 'UNKNOWN') AS ReportingProviderID
+		,SUM(v.Claim_Count) AS FiscalPeriodValue
+		,GETDATE() AS UpdatedDateTime
+		FROM [HPIDW].[stg].[THPVolumes] v
+		
+		LEFT JOIN dim.Providers pp
+		    ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
+		    AND pp.ProviderDataSourceID = 17
+		
+		LEFT JOIN map.ProviderLinking pl 
+		    ON pl.ChildProviderID = pp.ProviderID
+		
+		LEFT JOIN map.PracticeProviders mpp
+		    ON mpp.ProviderID = pp.ProviderID
+		
+		LEFT JOIN dim.Practices p
+		    ON p.PracticeID = ISNULL(mpp.PracticeID, v.Practice)
+		
+		WHERE v.Claim_Count IS NOT NULL 
+		
+		    AND v.Month >= @StartDate
+		    AND v.Month < DATEADD(MONTH, 1, @EndDate)
+		
+		    AND (@Practice = '0' OR p.PracticeSourceID = @Practice)
+		
+		
+		GROUP BY
+		    YEAR(v.Month),
+		    MONTH(v.Month),
+		    FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy'),
+		    p.PracticeID,
+		    ISNULL(pl.ParentProviderID, 'UNKNOWN')
+
+
+		) sub
+
+		GROUP BY  
+		sub.FiscalYear
+		,sub.FiscalPeriod
+		,sub.FiscalYearPeriod
+		,sub.ReportSection
+		,sub.ReportGroupLevel1
+		,sub.ReportGroupLevel2
+		,sub.ReportGroupLevel3
+		,sub.ReportGroupLevel4
+		,sub.PracticeID
+		,sub.ReportingProviderID
+
+
+		/* OLD THP script 
+
+			SELECT
 		 YEAR(v.Month) as FiscalYear
 		,MONTH(v.Month) as FiscalPeriod
 		,FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy') AS FiscalYearPeriod
@@ -364,12 +427,12 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		WHERE v.Claim_Count IS NOT NULL 
 		    --AND p.PracticeIsActive = 1   -- optional remove for historical consistency
 		
-		    AND v.Month >= @StartDate
-		    AND v.Month < DATEADD(MONTH, 1, @EndDate)
+		    --AND v.Month >= @StartDate
+		    --AND v.Month < DATEADD(MONTH, 1, @EndDate)
 		
-		    AND (@Practice = '0' OR p.PracticeSourceID = @Practice)
+		   -- AND (@Practice = '0' OR p.PracticeSourceID = @Practice)
 		
-		    AND p.PracticeID IN ('0~THP','0~CVFC')
+		    --AND p.PracticeID IN ('0~THP','0~CVFC')
 		
 		GROUP BY
 		    YEAR(v.Month),
@@ -377,19 +440,6 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		    FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy'),
 		    p.PracticeID,
 		    ISNULL(pr.ProviderID, 'UNKNOWN')
-			
-
-		) sub
-
-		GROUP BY  
-		sub.FiscalYear
-		,sub.FiscalPeriod
-		,sub.FiscalYearPeriod
-		,sub.ReportSection
-		,sub.ReportGroupLevel1
-		,sub.ReportGroupLevel2
-		,sub.ReportGroupLevel3
-		,sub.ReportGroupLevel4
-		,sub.PracticeID
-		,sub.ReportingProviderID
+	
+	*/
 GO

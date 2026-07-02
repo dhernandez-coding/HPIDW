@@ -45,11 +45,11 @@ PRINT 'Inserting records into #TEMP_Staging Table....'
 IF (SELECT COUNT(*) FROM #TEMP_Staging)  > 100 
 BEGIN
 	PRINT 'Deleting records from dim.vProviders...'
-	delete from dim.vProviders where ProviderDataSourceID = 0
+	delete from dim.Providers where ProviderDataSourceID = 0
 
 
 	PRINT 'Inserting records into dim.vProviders...'
-	insert into dim.vProviders
+	insert into dim.Providers
 	(
 		ProviderID,
 		ProviderDataSourceID,
