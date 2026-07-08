@@ -98,5 +98,5 @@ SELECT
 FROM fact.TransactionsPB t
 WHERE 1=1 
 	AND t.TransactionType IN ('Payment', 'Adjustment')
-	AND year(t.TransactionDateOfPosting) >= (year(getdate()) - 5) -- 3 years
+	AND t.TransactionDateOfPosting >= DATEFROMPARTS(YEAR(GETDATE()) - 5, 1, 1)
 GO

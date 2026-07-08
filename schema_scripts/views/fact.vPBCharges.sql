@@ -270,7 +270,7 @@ FROM (
 					WHERE 1=1 -- AND TransactionAccountID = '1~19228230'
 						AND TransactionType = 'Charge'
 						AND (TransactionModifier1 = '51' OR TransactionModifier2 = '51' OR TransactionModifier3 = '51' OR TransactionModifier4 = '51')
-						AND YEAR(TransactionDateOfPosting) >= (year(getdate()) - 5)
+						AND TransactionDateOfPosting >= DATEFROMPARTS(YEAR(GETDATE()) - 5, 1, 1)
 						--AND TransactionBillingType = 'PB'
 						--AND TransactionStatus = 'Active' /*Excluding Voided Transactions*/
 					GROUP BY  
@@ -299,7 +299,7 @@ FROM (
 							   
 
 	where 1=1 
-	AND year(t.TransactionDateOfPosting) >= (year(getdate()) - 5) -- 3 years
+	AND t.TransactionDateOfPosting >= DATEFROMPARTS(YEAR(GETDATE()) - 5, 1, 1)
 	--AND t.TransactionBillingType = 'PB'
 	--AND t.TransactionDateOfPosting >= '10/2/2024'
 	--AND t.TransactionModifier1 is not null

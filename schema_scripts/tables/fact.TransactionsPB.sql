@@ -44,6 +44,8 @@ CREATE TABLE [fact].[TransactionsPB] (
     [TransactionPayerPlanID] VARCHAR(50) NULL,
     [TransactionPlaceOfService] VARCHAR(100) NULL,
     [TransactionActiveARAmount] MONEY NULL,
+    [TransactionPostingYear] INT NULL,
+    [TransactionParentID] VARCHAR(113) NOT NULL,
     CONSTRAINT [PK__Transact__55433A4B1E5888A4] PRIMARY KEY ([TransactionID])
 );
 GO

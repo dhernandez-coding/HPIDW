@@ -292,17 +292,7 @@ FROM (
 												
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/
 												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887'))
-												
-		/*Replaced on 11.6.2024 due to duplicates caused by TMG Imaging and TMG Billing Office departments
-		left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
-											AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 
-											AND pp.PracticeProviderEndDate >= t.TransactionDateOfPosting
-											/*This is here to handle duplicates with Amy James and Murphi Scarborough at multiple practices; Chris Cross - 10.7.24 - Added Olivo, Pape, and Dunkleberger due to practicing at PBJ, NMO, and NRJ*/
-											AND ((t.TransactionBillingProviderID in ('1~19898','5~126867','1~19711','5~125582','5~122305','5~104092','5~120997','1~14003','1~18356','1~13986') 
-																					AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND t.TransactionBillingProviderID = pp.ProviderID)))
-												  OR t.TransactionBillingProviderID not in ('1~19898','5~126867','1~19711','5~125582','5~122305','5~104092','5~120997','1~14003','1~18356','1~13986'))
-											--AND pp.ProviderID = t.TransactionBillingProviderID
-		*/		
+													
 		left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 		left join rpt.PBPaymentLag ppl ON ppl.PracticeID = pt.PracticeID
 		-- 1/4: RR joins added to include CPTs from CMS (Integris) and RVU adjustments from AMGA
@@ -342,7 +332,7 @@ FROM (
 					WHERE 1=1 -- AND TransactionAccountID = '1~19228230'
 						AND TransactionType = 'Charge'
 						AND (TransactionModifier1 = '51' OR TransactionModifier2 = '51' OR TransactionModifier3 = '51' OR TransactionModifier4 = '51')
-						AND YEAR(TransactionDateOfPosting) >= (year(getdate()) - 5)
+						AND TransactionDateOfPosting >= DATEFROMPARTS(YEAR(GETDATE()) - 5, 1, 1)
 						--AND TransactionBillingType = 'PB'
 						--AND TransactionStatus = 'Active' /*Excluding Voided Transactions*/
 					GROUP BY  
@@ -358,20 +348,18 @@ FROM (
 		LEFT JOIN dim.PayerCategories pc ON pc.PayerCategoryID = py.PayerCategoryID
 		LEFT JOIN dim.PayerGroups pg ON pg.PayerGroupID = py.PayerGroupID
 		LEFT JOIN fact.Visits2 v on t.TransactionVisitID = v.VisitID
-		LEFT JOIN fact.TransactionsPB tc ON tc.TransactionType = 'Charge' 
-									   AND t.TransactionType <> 'Charge'
-									   AND CONCAT(t.TransactionDatasourceID,'~',t.TransactionParentSourceID) = tc.TransactionID
-									   --AND tc.TransactionDatasourceID = t.TransactionDatasourceID
-									   --AND tc.TransactionSourceID = t.TransactionParentSourceID
+		LEFT JOIN fact.TransactionsPB tc ON tc.TransactionID = t.TransactionParentID
+											AND tc.TransactionType = 'Charge'
+											AND t.TransactionType <> 'Charge'
+									   --AND CONCAT(t.TransactionDatasourceID,'~',t.TransactionParentSourceID) = tc.TransactionID
 		left join  dim.vPBProcedureCodeCategories cc ON cc.ProcedureCode = COALESCE(tc.TransactionCPTCode,tc.TransactionCode) AND tc.TransactionType = 'Charge'
 		--left join dim.ProcedureCodes pcpt on pcpt.ProcedureCode = t.TransactionCPTCode and pcpt.ProcedureCodeDataSourceID = t.TransactionDatasourceID
 		--left join dim.ProcedureCodes pcpt2 on pcpt2.ProcedureCode = tc.TransactionCPTCode and pcpt2.ProcedureCodeDataSourceID = tc.TransactionDatasourceID
 		--left join dim.CPTCode pcpt ON pcpt.CPTCode = t.TransactionCPTCode AND pcpt.EffectiveEndDate > GETDATE()
 		left join dim.CPTCode pcpt2 ON pcpt2.CPTCode = tc.TransactionCPTCode AND pcpt2.EffectiveEndDate > GETDATE()
-							   
 
 	where 1=1 
-	AND year(t.TransactionDateOfPosting) >= (year(getdate()) - 5) -- 2 
+		AND t.TransactionDateOfPosting >= DATEFROMPARTS(YEAR(GETDATE()) - 5, 1, 1)
 	--AND t.TransactionBillingType = 'PB'
 	--AND t.TransactionDateOfPosting >= '10/2/2024'
 	--AND t.TransactionModifier1 is not null
