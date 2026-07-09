@@ -341,13 +341,13 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		,NULL AS ReportGroupLevel2
 		,NULL AS ReportGroupLevel3
 		,NULL AS ReportGroupLevel4
-		,p.PracticeID
+		,ISNULL(p.PracticeID, '0~THP') as PracticeID
 		,ISNULL(pl.ParentProviderID, 'UNKNOWN') AS ReportingProviderID
 		,SUM(v.Claim_Count) AS FiscalPeriodValue
 		,GETDATE() AS UpdatedDateTime
 		FROM [HPIDW].[stg].[THPVolumes] v
 		
-		LEFT JOIN dim.Providers pp
+		LEFT JOIN dim.Providers pp 
 		    ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
 		    AND pp.ProviderDataSourceID = 17
 		
@@ -364,7 +364,6 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		
 		    AND v.Month >= @StartDate
 		    AND v.Month < DATEADD(MONTH, 1, @EndDate)
-		
 		    AND (@Practice = '0' OR p.PracticeSourceID = @Practice)
 		
 		
