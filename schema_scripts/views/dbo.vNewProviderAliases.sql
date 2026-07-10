@@ -2,13 +2,18 @@ CREATE view vNewProviderAliases as
 select 
 nProviderId as ProviderId,
 nSourceSystemId as SourceSystemId,
-nValue as Value
+nValue as Value,
+ProviderNPI,
+
+ProviderLastName, 
+ProviderFirstName
 from (
 select 
 
 heroP.ProviderId as nProviderId, 
 heroP.ProviderLastName, 
 heroP.ProviderFirstName,
+heroP.ProviderNPI,
 ss.Name,
 pl.ParentProviderID, 
 LEFT(pl.ChildProviderId, CHARINDEX('~', pl.ChildProviderId) - 1) as nSourceSystemId
