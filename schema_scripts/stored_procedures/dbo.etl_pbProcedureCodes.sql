@@ -1,5 +1,6 @@
-Create Procedure etl_pbProcedureCodes as
+CREATE Procedure [dbo].[etl_pbProcedureCodes] as
 
+                EXECUTE ('TRUNCATE TABLE [hpi].[stg].[PBProcedureCodess]') at [hero-db];
 insert into [HERO-DB].[hpi].[stg].[PBProcedureCodess] ([ProcedureCode]
       ,[CptDescription]
       ,[IsDeleted]

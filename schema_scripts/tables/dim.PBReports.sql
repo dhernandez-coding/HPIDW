@@ -9,6 +9,7 @@ CREATE TABLE [dim].[PBReports] (
     [PBReportIsActive] BIT NULL,
     [PBReportUpdatedDatetime] DATETIME NULL,
     [PBDatasetID] NVARCHAR(100) NULL,
-    [PBReportDescription] NVARCHAR(MAX) NULL
+    [PBReportDescription] NVARCHAR(MAX) NULL,
+    [PBReportDataSourceType] VARCHAR(50) NULL
 );
 GO

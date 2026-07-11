@@ -8,6 +8,7 @@ Select [ProviderID] as ProviderProviderID
       ,[ProviderLastName]
       ,[ProviderGender]
       ,[ProviderSuffix]
+	  ,ProviderNPI
       ,[ProviderStreetAddress1]
       ,[ProviderStreetAddress2]
       ,[ProviderCity]
@@ -15,8 +16,10 @@ Select [ProviderID] as ProviderProviderID
       ,[ProviderZipCode]
       ,[ProviderPhone]
       ,[ProviderFax]
-	  ,
-	  ISNULL(
+	  ,ProviderUPIN
+	  ,ProviderIsActive
+	  ,ProviderUpdatedDateTime
+	  ,ISNULL(
     TRY_CONVERT(int,
         CASE 
             WHEN CHARINDEX('~', p.ProviderSpecialtyID) > 0 

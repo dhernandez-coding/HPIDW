@@ -850,6 +850,9 @@ UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, Pract
 INSERT INTO map.PracticeProviders SELECT '0~ACC','5~P1040276','KVH',0,'5/26/2026','12/31/2099',1,getdate(),1,0,NULL,1,1,'PA',11,130,2
 
 
+/*7.10.26 Added Logan Roles to PBJ*/
+INSERT INTO map.PracticeProviders SELECT '0~PBJ','5~145436','LCR',0,'6/22/2026','12/31/2099',1,getdate(),1,0,NULL,1,1,'PA',11,129,2
+
 	select * from map.vPracticeProviders p where p.PracticeID = '0~acc'
 	
 	select * from map.vPracticeProviders p where p.PracticeID = '0~NRJ'

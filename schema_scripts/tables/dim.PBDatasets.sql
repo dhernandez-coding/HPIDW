@@ -7,6 +7,8 @@ CREATE TABLE [dim].[PBDatasets] (
     [PBDatasetName] NVARCHAR(256) NULL,
     [PBDatasetIsActive] BIT NOT NULL DEFAULT ((1)),
     [PBDatasetUpdatedDatetime] DATETIME NOT NULL DEFAULT (getdate()),
+    [PBDatasetLastRefreshDatetime] DATETIME2 NULL,
+    [PBDatasetLastRefreshStatus] VARCHAR(50) NULL,
     CONSTRAINT [PK__PBDatase__CE4BF629CE8D783B] PRIMARY KEY ([PBDatasetID])
 );
 GO
