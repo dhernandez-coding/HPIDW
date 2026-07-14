@@ -9,6 +9,7 @@ CREATE TABLE [dim].[SQLAgentJobs] (
     [LoadDatetime] DATETIME NULL DEFAULT (getdate()),
     [StoredProcedure] VARCHAR(400) NULL,
     [DatabaseName] VARCHAR(200) NULL,
+    [StoredProcedureFullID] VARCHAR(601) NULL,
     CONSTRAINT [PK__SQLAgent__00DAA4C8E8409D8C] PRIMARY KEY ([JobExecutionID])
 );
 GO

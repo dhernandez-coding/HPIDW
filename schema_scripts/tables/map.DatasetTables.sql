@@ -1,0 +1,10 @@
+CREATE TABLE [map].[DatasetTables] (
+    [MapID] VARCHAR(400) NOT NULL,
+    [PBDatasetTableID] VARCHAR(300) NULL,
+    [SQLID] VARCHAR(300) NULL,
+    [SQLObjectName] NVARCHAR(400) NULL,
+    [SQLObjectType] VARCHAR(20) NULL,
+    [LoadDatetime] DATETIME2 NULL,
+    CONSTRAINT [PK__DatasetT__3265E2FB650F6214] PRIMARY KEY ([MapID])
+);
+GO
