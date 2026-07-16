@@ -10,6 +10,7 @@ CREATE TABLE [dim].[PBReports] (
     [PBReportUpdatedDatetime] DATETIME NULL,
     [PBDatasetID] NVARCHAR(100) NULL,
     [PBReportDescription] NVARCHAR(MAX) NULL,
-    [PBReportDataSourceType] VARCHAR(50) NULL
+    [PBReportDataSourceType] VARCHAR(50) NULL,
+    [PBReportWorkspaceName] NVARCHAR(255) NULL
 );
 GO
