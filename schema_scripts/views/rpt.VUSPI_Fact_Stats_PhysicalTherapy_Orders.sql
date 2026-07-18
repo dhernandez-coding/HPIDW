@@ -1,4 +1,4 @@
-CREATE    VIEW [rpt].[VUSPI_Fact_PhysicalTherapy_Orders] AS
+CREATE VIEW [rpt].[VUSPI_Fact_PhysicalTherapy_Orders] AS
 SELECT 
     d.DepartmentLocationID AS facility_id,
     l.LocationName AS facility_name,
@@ -10,14 +10,15 @@ SELECT
         WHEN d.DepartmentName LIKE '%Hand%' THEN 'Outpatient PT Hand - Therapist'
         ELSE 'Physical Therapy-Therapist'
     END AS sub_department,
-    'PT charge lines' AS unit_of_service,
+    'PT units' AS unit_of_service,
     'count' AS unit_type,
-    COUNT(t.TransactionID) AS actual_volume
+    SUM(t.TransactionUnits) AS actual_volume
 FROM fact.Transactions2 t
 JOIN dim.vDepartments d ON t.TransactionDepartmentID = d.DepartmentID
 LEFT JOIN dim.vLocations l ON l.LocationID = d.DepartmentLocationID
 WHERE t.TransactionDatasourceID = 5
   AND t.TransactionIsActive = 1
+  AND t.TransactionType = 'Charge'
   AND t.TransactionDateOfVoid IS NULL
   AND d.DepartmentLocationID IN (
       '5~43001006','5~43001007','5~43001008','5~43002001','5~43004001',
@@ -29,6 +30,10 @@ WHERE t.TransactionDatasourceID = 5
     OR d.DepartmentName LIKE '%Therapy%' 
     OR d.DepartmentName LIKE '%Physical%')
   AND d.DepartmentName NOT LIKE '%RT%' -- Exclude Respiratory Therapy
+  AND t.TransactionRevenueCode in (
+      '420','421','422','423','424','429','430','431','432','433','434','439','440','441','442','443','444','449',
+      '0420','0421','0422','0423','0424','0429','0430','0431','0432','0433','0434','0439','0440','0441','0442','0443','0444','0449'
+  )
 GROUP BY 
     d.DepartmentLocationID,
     l.LocationName,

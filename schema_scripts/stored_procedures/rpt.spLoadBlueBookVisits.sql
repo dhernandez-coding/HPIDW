@@ -96,7 +96,7 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
-		left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
+		left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
 		left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 		left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 
@@ -351,7 +351,7 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		    ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
 		    AND pp.ProviderDataSourceID = 17
 		
-		LEFT JOIN map.ProviderLinking pl 
+		LEFT JOIN map.vProviderLinking pl 
 		    ON pl.ChildProviderID = pp.ProviderID
 		
 		LEFT JOIN map.PracticeProviders mpp
@@ -416,7 +416,7 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 		OUTER APPLY (
 		    SELECT TOP 1 pl.ParentProviderID AS ProviderID
 		    FROM dim.vProviders pp
-		    LEFT JOIN map.ProviderLinking pl 
+		    LEFT JOIN map.vProviderLinking pl 
 		        ON pl.ChildProviderID = pp.ProviderID
 		    WHERE UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
 		      AND pp.ProviderDataSourceID IN (17)

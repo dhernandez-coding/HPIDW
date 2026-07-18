@@ -68,7 +68,7 @@ DROP TABLE IF EXISTS #TEMP_Collections
 											AND c.TransactionAmount <> 0 /*Excluded on 12/4 per Nicks request*/
 			LEFT JOIN map.PayerPlanFeeSchedules pfs ON pfs.PayerPlanID = c.TransactionPayerPlanID
 			LEFT JOIN dim.FeeSchedules fs ON fs.FeeScheduleID = pfs.FeeScheduleID
-			left join map.ProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
+			left join map.vProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
 			left join map.PracticeDepartments pd ON pd.DepartmentID = c.TransactionDepartmentID
 			left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= c.TransactionDateOfPosting 
@@ -151,7 +151,7 @@ SELECT * FROM #TEMP_Collections
 			INNER JOIN fact.TransactionsPB c ON c.TransactionType = 'Charge'
 											AND p.TransactionType <> 'Charge'
 											AND CONCAT(p.TransactionDatasourceID,'~',p.TransactionParentSourceID) = c.TransactionID	
-			left join map.ProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
+			left join map.vProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
 			left join map.PracticeDepartments pd ON pd.DepartmentID = c.TransactionDepartmentID
 			left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 												AND pp.PracticeProviderEffectiveDate <= c.TransactionDateOfPosting 

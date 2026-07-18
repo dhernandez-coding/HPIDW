@@ -1,4 +1,4 @@
-CREATE PROCEDURE rpt.spLoadMetricARCurrentAging_INCREMENTAL	AS
+CREATE PROCEDURE [rpt].[spLoadMetricARCurrentAging_INCREMENTAL]	AS
 BEGIN		
 	-- =============================================
 	-- Author:		Robert Beaird
@@ -93,7 +93,7 @@ LEFT JOIN dim.Dates d
 --	ON ar.TransactionBillingProviderID = pp.ProviderID
 LEFT JOIN dim.Departments dt
 	ON ar.TransactionDepartmentID = dt.DepartmentID
-	left join map.ProviderLinking pl ON pl.ChildProviderID = ar.TransactionBillingProviderID
+	left join map.vProviderLinking pl ON pl.ChildProviderID = ar.TransactionBillingProviderID
 	left join map.PracticeDepartments pd ON pd.DepartmentID = ar.TransactionDepartmentID
 	left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 										AND pp.PracticeProviderEffectiveDate <= ar.TransactionPostDate 

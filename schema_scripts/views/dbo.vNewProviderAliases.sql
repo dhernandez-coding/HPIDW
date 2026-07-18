@@ -1,4 +1,6 @@
-CREATE view vNewProviderAliases as
+CREATE view [dbo].[vNewProviderAliases] as
+
+/*This is used for getting new provider aliases to external source systems*/
 select 
 nProviderId as ProviderId,
 nSourceSystemId as SourceSystemId,
@@ -18,9 +20,9 @@ ss.Name,
 pl.ParentProviderID, 
 LEFT(pl.ChildProviderId, CHARINDEX('~', pl.ChildProviderId) - 1) as nSourceSystemId
 ,SUBSTRING(pl.ChildProviderId, CHARINDEX('~', pl.ChildProviderId) + 1, LEN(pl.ChildProviderId)) AS nValue
-from map.ProviderLinking pl
+from map.vProviderLinking pl
 left join dim.Providers p on  p.ProviderId = pl.ParentProviderID
-left join map.ProviderLinking plJr on plJr.ChildProviderID = p.ProviderId
+left join map.vProviderLinking plJr on plJr.ChildProviderID = p.ProviderId
 
 left join [hero-db].hpi.dbo.Providerss heroP on p.ProviderNPI = heroP.providerNPI
 

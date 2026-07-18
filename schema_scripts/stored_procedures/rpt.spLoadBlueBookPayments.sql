@@ -96,7 +96,7 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 			LEFT JOIN dim.PayerCategories pc ON pc.PayerCategoryID = py.PayerCategoryID
 			LEFT JOIN dim.PayerGroups pg ON pg.PayerGroupID = py.PayerGroupID
 			left join dim.Departments d ON d.DepartmentID = t.TransactionDepartmentID
-			left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
+			left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
 			left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 			left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 
@@ -228,7 +228,7 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 			LEFT JOIN map.vPracticeProviders pp
 			    ON pp.ProviderID = pr.ProviderID
 			    AND pp.PracticeID = p.PracticeID -- ✅ Prevents duplication for multi-practice mid-levels
-			LEFT JOIN map.ProviderLinking pl
+			LEFT JOIN map.vProviderLinking pl
 			    ON pl.ChildProviderID = pp.ProviderID
 			WHERE thp.Account_Type = 'Income'
 			    AND thp.Account NOT IN ('RENTAL INCOME','OTHER INCOME')

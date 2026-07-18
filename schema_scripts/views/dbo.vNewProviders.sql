@@ -1,4 +1,6 @@
-CREATE view vNewProviders as 
+CREATE view [dbo].[vNewProviders] as 
+
+/*this is used for gettig new providers into the app*/
 Select [ProviderID] as ProviderProviderID
       ,[ProviderDataSourceID]
       ,[ProviderSourceID]
@@ -34,5 +36,5 @@ Select [ProviderID] as ProviderProviderID
       --,Coalesce([ProviderSpecialtyID], 4) as [ProviderSpecialtyID]--4 is general i nthe HPI app
 	  from dim.Providers p
 where ProviderNPi is not null and Trim(ProviderNPI) <> ''
- AND  ProviderId not in (select ChildProviderId from map.ProviderLinking) and ProviderId not in (select ProviderProviderId from [hero-db].hpi.dbo.Providerss)
+ AND  ProviderId not in (select ChildProviderId from map.vProviderLinking) and ProviderId not in (select ProviderProviderId from [hero-db].hpi.dbo.Providerss)
 GO

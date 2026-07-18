@@ -180,7 +180,7 @@ FROM (
 		WHERE 1=1
 		) ar
 	left join dim.Datasources ds ON ds.DataSourceID = ar.TransactionDataSourceID
-	--left join map.ProviderLinking pl ON pl.ChildProviderID = ar.TransactionBillingProviderID
+	--left join map.vProviderLinking pl ON pl.ChildProviderID = ar.TransactionBillingProviderID
 	--left join map.PracticeDepartments pd ON pd.DepartmentID = ar.TransactionDepartmentID
 	--left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 	--									AND pp.PracticeProviderEffectiveDate <= ar.TransactionPostDate 
@@ -189,7 +189,7 @@ FROM (
 	--									AND ((ar.TransactionBillingProviderID in ('1~19898','5~126867','1~19711','5~125582') AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND ar.TransactionBillingProviderID = pp.ProviderID)))
 	--										  OR ar.TransactionBillingProviderID not in ('1~19898','5~126867','1~19711','5~125582'))
 	--									--AND pp.ProviderID = t.TransactionBillingProviderID
-	left join map.ProviderLinking pl ON pl.ChildProviderID = ar.TransactionBillingProviderID
+	left join map.vProviderLinking pl ON pl.ChildProviderID = ar.TransactionBillingProviderID
 	left join map.PracticeDepartments pd ON pd.DepartmentID = ar.TransactionDepartmentID
 	left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 								AND pp.PracticeProviderEffectiveDate <= ar.TransactionPostDate 

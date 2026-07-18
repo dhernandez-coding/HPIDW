@@ -178,7 +178,7 @@ FROM (
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
 		left join dim.DataSources ds ON t.TransactionDatasourceID = ds.DataSourceID
-		left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID  AND NOT ( pl.ChildProviderID LIKE '18~%' OR pl.ChildProviderID LIKE '17~%') --Here for handle duplicates with THP Providers on APM
+		left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID  AND NOT ( pl.ChildProviderID LIKE '18~%' OR pl.ChildProviderID LIKE '17~%') --Here for handle duplicates with THP Providers on APM
 		left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 		left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 

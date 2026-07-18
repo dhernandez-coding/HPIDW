@@ -96,7 +96,7 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 												  AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 
 												  AND pp.PracticeProviderEndDate >= t.TransactionDateOfPosting
 			*/
-			left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
+			left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
 			left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 			left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 
@@ -219,7 +219,7 @@ FROM [HPIDW].[stg].[THPVolumes] v
 LEFT JOIN dim.Providers pp
     ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
     AND pp.ProviderDataSourceID = 17
-LEFT JOIN map.ProviderLinking pl 
+LEFT JOIN map.vProviderLinking pl 
     ON pl.ChildProviderID = pp.ProviderID
 LEFT JOIN map.PracticeProviders mpp
     ON mpp.ProviderID = pp.ProviderID
@@ -256,7 +256,7 @@ GROUP BY
 --OUTER APPLY (
 --    SELECT TOP 1 pl.ParentProviderID AS ProviderID
 --    FROM dim.vProviders pp
---    LEFT JOIN map.ProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
+--    LEFT JOIN map.vProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
 --    WHERE UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
 --      AND pp.ProviderDataSourceID IN (17)
 --    ORDER BY pp.ProviderDataSourceID DESC, pp.ProviderID

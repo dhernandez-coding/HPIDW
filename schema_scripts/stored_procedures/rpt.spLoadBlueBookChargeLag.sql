@@ -11,6 +11,8 @@ Change Control:
 	1. 9/4/24 - Chris Cross - Replaced fact.Transactions2 with fact.TransactionsPB
 	2. 6/4/25 - Eric Silvestri - Added datasource 12 to the where clause to include HPI Customer data 
 	3. 8/12/25 - Chris Cross - Added ReportGroupLevel4 for SCS location-specific reports
+	
+	4. 7/17/26 - Logan Richardson - Replaced ProviderLinking with vProviderLinking
 */
 
 SET NOCOUNT ON
@@ -56,7 +58,7 @@ IF OBJECT_ID('tempdb..#TempChargeLag') IS NOT NULL DROP TABLE #TempChargeLag
 	INTO #TempChargeLag
 	FROM fact.TransactionsPB t
 		left join dim.Departments d ON d.DepartmentID = t.TransactionDepartmentID
-		left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
+		left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
 		left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 		left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 

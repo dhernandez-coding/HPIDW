@@ -72,7 +72,7 @@ DROP TABLE IF EXISTS #TEMP_Collections
 			LEFT JOIN rpt.BCBSCorrected bc on bc.TransactionSourceID = c.TransactionParentSourceID
 			LEFT JOIN map.PayerPlanFeeSchedules pfs ON pfs.PayerPlanID = c.TransactionPayerPlanID
 			LEFT JOIN dim.FeeSchedules fs ON fs.FeeScheduleID = pfs.FeeScheduleID --I was not including this line because was giving me duplicates trying to debug it 
-			left join map.ProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
+			left join map.vProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
 			left join map.PracticeDepartments pd ON pd.DepartmentID = c.TransactionDepartmentID
 			left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= c.TransactionDateOfPosting 

@@ -67,7 +67,7 @@ FROM fact.DenialsPB d
 	LEFT JOIN dim.PayerPlans pyp ON d.DenialPayerPlanID = pyp.PayerPlanID
 ----------- JOIN in service providers' practices
 	LEFT JOIN dim.vProviders sp ON d.DenialServiceProviderID = sp.ProviderID
-	LEFT JOIN map.ProviderLinking pls ON pls.ChildProviderID = d.DenialServiceProviderID
+	LEFT JOIN map.vProviderLinking pls ON pls.ChildProviderID = d.DenialServiceProviderID
 	LEFT JOIN map.PracticeDepartments pds ON pds.DepartmentID = d.DenialDepartmentID
 	LEFT JOIN map.vPracticeProviders pps ON pps.ParentProviderID = pls.ParentProviderID
 											AND pps.PracticeProviderEffectiveDate <= d.ChargePostingDate 
@@ -79,7 +79,7 @@ FROM fact.DenialsPB d
 	LEFT JOIN dim.vPractices pts ON pts.PracticeID = COALESCE(pds.PracticeID,pps.PracticeID)
 ----------- JOIN in biling providers' practices
 	LEFT JOIN dim.vProviders bp ON d.DenialBillingProviderID = bp.ProviderID
-	LEFT JOIN map.ProviderLinking plb ON plb.ChildProviderID = d.DenialBillingProviderID
+	LEFT JOIN map.vProviderLinking plb ON plb.ChildProviderID = d.DenialBillingProviderID
 	LEFT JOIN map.PracticeDepartments pdb ON pdb.DepartmentID = d.DenialDepartmentID
 	LEFT JOIN map.vPracticeProviders ppb ON ppb.ParentProviderID = plb.ParentProviderID
 											AND ppb.PracticeProviderEffectiveDate <= d.ChargePostingDate 

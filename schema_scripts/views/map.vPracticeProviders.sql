@@ -1,6 +1,46 @@
 CREATE View [map].[vPracticeProviders] 
-WITH SCHEMABINDING
+--WITH SCHEMABINDING
 as
+
+select pp.Id as PracticeProviderID
+      ,p.[PracticePracticeID]
+      ,p.[PracticeName]
+      ,pr.[ProviderProviderID]
+      ,[ProviderDataSourceID]
+      ,null as [ParentProviderID]
+      ,Concat(pr.ProviderFirstName, ' ',pr.ProviderMiddleInitial, ' ',pr.ProviderLastName) [ProviderFullName]
+      ,[ProviderFirstName]
+      ,[ProviderMiddleInitial]
+      ,[ProviderLastName]
+      ,[ProviderAbbreviation]
+      ,[PracticeProviderIsPrimary]
+      ,[PracticeProviderEffectiveDate]
+      ,[PracticeProviderEndDate]
+      ,[PracticeProviderIsActive]
+      ,[PracticeProviderUpdatedDatetime]
+      ,[PracticeProviderFTE]
+      ,[PracticeProviderAllocationPercent]
+      ,l.LocationName as [PracticeProviderLocation]
+      ,[PracticeProviderIsSpecialist]
+      ,[PracticeProviderIsMidLevel]
+      ,[PracticeProviderGLType]
+      ,[PracticeProviderGLTypeID]
+      ,[PracticeProviderGLProviderID]
+      ,[PracticeProviderDHSType] from hpi_etl.dbo.PracticeProviderss pp
+	  left join hpi_etl.dbo.PRacticess p on pp.PracticeID = p.PracticeID 
+	  left join hpi_etl.dbo.Providerss pr on pp.ProviderID = pr.ProviderID
+	  left join hpi_etl.dbo.ProviderAliases pa on pr.PRoviderID = pa.Id
+	  left join hpi_etl.dbo.Locationss l on pp.PracticeProviderLocation = l.LocationID
+WHERE EXISTS (
+    SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 1
+)
+
+UNION ALL
+
+
+
+
+
 SELECT [PracticeProviderID]
       ,pp.[PracticeID]
 	  ,pr.PracticeName
@@ -27,7 +67,11 @@ SELECT [PracticeProviderID]
       ,[PracticeProviderGLProviderID]
 	  ,[PracticeProviderDHSType]
 FROM [map].[PracticeProviders] pp 
-  left join dim.Providers p  ON p.ProviderID = pp.ProviderID
-  left join  dim.Practices pr ON pr.PracticeID = pp.PracticeID
-  left join  map.ProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
+  left join dim.vProviders p  ON p.ProviderID = pp.ProviderID
+  left join  dim.vPractices pr ON pr.PracticeID = pp.PracticeID
+  left join  map.vProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
+  where 1=1  and
+EXISTS (
+    SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 0
+)
 GO

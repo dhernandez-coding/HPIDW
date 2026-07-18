@@ -1,0 +1,5 @@
+CREATE TABLE [dbo].[DWCONFIG] (
+    [Name] NVARCHAR(150) NOT NULL,
+    [Value] BIT NOT NULL
+);
+GO

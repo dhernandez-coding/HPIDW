@@ -33,7 +33,7 @@ BEGIN
         INNER JOIN fact.TransactionsPB c ON c.TransactionType = 'Charge'
             AND p.TransactionType <> 'Charge'
             AND CONCAT(p.TransactionDatasourceID, '~', p.TransactionParentSourceID) = c.TransactionID
-        LEFT JOIN map.ProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
+        LEFT JOIN map.vProviderLinking pl ON pl.ChildProviderID = c.TransactionBillingProviderID
         LEFT JOIN map.PracticeDepartments pd ON pd.DepartmentID = c.TransactionDepartmentID
         LEFT JOIN map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
             AND pp.PracticeProviderEffectiveDate <= c.TransactionDateOfPosting

@@ -36,7 +36,7 @@ FROM (
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
 		left join dim.DataSources ds ON t.TransactionDatasourceID = ds.DataSourceID
-		left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
+		left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
 		left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 		
 		

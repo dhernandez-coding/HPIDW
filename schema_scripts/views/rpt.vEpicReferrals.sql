@@ -148,11 +148,11 @@ CREATE VIEW [rpt].[vEpicReferrals] as
 		--left join dim.vPractices pt on pt.PracticeID = dt.PracticeID
 		
 		--left join map.EpicPracticeProviders ppb ON ppb.ProviderID = CONCAT('5~',c.PROV_ID)
-		left join map.ProviderLinking plb ON plb.ChildProviderID = CONCAT('5~',c.PROV_ID)
+		left join map.vProviderLinking plb ON plb.ChildProviderID = CONCAT('5~',c.PROV_ID)
 		left join map.zTEST_PracticeProviders ppb ON ppb.ProviderID = plb.ParentProviderID AND ppb.PracticeProviderIsDefaultReferralPractice = 1
 
 		--left join map.EpicPracticeProviders ppt ON ppt.ProviderID = CONCAT('5~',c1.PROV_ID)
-		left join map.ProviderLinking plt ON plt.ChildProviderID = CONCAT('5~',c1.PROV_ID)
+		left join map.vProviderLinking plt ON plt.ChildProviderID = CONCAT('5~',c1.PROV_ID)
 		left join map.zTEST_PracticeProviders ppt ON ppt.ProviderID = plt.ParentProviderID AND ppt.PracticeProviderIsDefaultReferralPractice = 1
 
 

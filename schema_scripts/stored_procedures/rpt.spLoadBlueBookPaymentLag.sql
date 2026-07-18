@@ -71,7 +71,7 @@ IF OBJECT_ID('tempdb..#TempPaymentLag') IS NOT NULL DROP TABLE #TempPaymentLag
 			--,t.*
 		FROM fact.TransactionsPB t
 			left join dim.Departments d ON d.DepartmentID = t.TransactionDepartmentID
-			left join map.ProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
+			left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID
 			left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 			left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
 									AND pp.PracticeProviderEffectiveDate <= t.TransactionDateOfPosting 
