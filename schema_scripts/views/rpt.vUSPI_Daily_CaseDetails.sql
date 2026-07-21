@@ -31,25 +31,26 @@ VisitDiagnosisVisitID
 ,SecondaryProviders as (
 
 select 
-	CONCAT('5~',h.HSP_ACCOUNT_ID) as AccountID ,
-    -- Pivot for PAYOR_ID
-    -- Payor Pivot
-    MAX(CASE WHEN h.LINE = 1 THEN p.PayerName END) AS PrimaryPayor,
-    MAX(CASE WHEN h.LINE = 2 THEN p.PayerName END) AS SecondaryPayor,
-    MAX(CASE WHEN h.LINE = 3 THEN p.PayerName END) AS ThirdPayor,
-    MAX(CASE WHEN h.LINE = 4 THEN p.PayerName END) AS FourthPayor,
+	CONCAT('5~', r.HSP_ACCOUNT_ID) as AccountID,
+    -- Payor Pivot (evaluated locally from local dim.vPayers)
+    MAX(CASE WHEN r.LINE = 1 THEN p.PayerName END) AS PrimaryPayor,
+    MAX(CASE WHEN r.LINE = 2 THEN p.PayerName END) AS SecondaryPayor,
+    MAX(CASE WHEN r.LINE = 3 THEN p.PayerName END) AS ThirdPayor,
+    MAX(CASE WHEN r.LINE = 4 THEN p.PayerName END) AS FourthPayor,
 
     -- Subscriber Number Pivot
-    MAX(CASE WHEN h.LINE = 1 THEN c.SUBSCR_NUM END) AS PrimarySubscriber,
-    MAX(CASE WHEN h.LINE = 2 THEN c.SUBSCR_NUM END) AS SecondarySubscriber,
-    MAX(CASE WHEN h.LINE = 3 THEN c.SUBSCR_NUM END) AS ThirdSubscriber,
-    MAX(CASE WHEN h.LINE = 4 THEN c.SUBSCR_NUM END) AS FourthSubscriber
-
-from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCT_CVG_LIST h  
-left join [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].COVERAGE C ON h.COVERAGE_ID= C.COVERAGE_ID
-left join dim. vPayers p  on p.PayerID = CONCAT('5~',c.PAYOR_ID)
-where HSP_ACCOUNT_ID like '6%'
-GROUP BY h.HSP_ACCOUNT_ID
+    MAX(CASE WHEN r.LINE = 1 THEN r.SUBSCR_NUM END) AS PrimarySubscriber,
+    MAX(CASE WHEN r.LINE = 2 THEN r.SUBSCR_NUM END) AS SecondarySubscriber,
+    MAX(CASE WHEN r.LINE = 3 THEN r.SUBSCR_NUM END) AS ThirdSubscriber,
+    MAX(CASE WHEN r.LINE = 4 THEN r.SUBSCR_NUM END) AS FourthSubscriber
+from OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
+    SELECT h.HSP_ACCOUNT_ID, h.LINE, c.PAYOR_ID, c.SUBSCR_NUM
+    FROM CLARITY.ORGFILTER.HSP_ACCT_CVG_LIST h
+    LEFT JOIN CLARITY.ORGFILTER.COVERAGE c ON h.COVERAGE_ID = c.COVERAGE_ID
+    WHERE h.HSP_ACCOUNT_ID LIKE ''6%''
+') r
+left join dim.vPayers p on p.PayerID = CONCAT('5~', r.PAYOR_ID)
+GROUP BY r.HSP_ACCOUNT_ID
 
 )
 

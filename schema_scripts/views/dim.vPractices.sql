@@ -47,13 +47,13 @@ CREATE VIEW [dim].[vPractices] as
  
 
   select 
-  [PracticePracticeID] PracticeID
+  [PracticePracticeID] as PracticeID
       ,[PracticeDataSourceID]
       ,[PracticeSourceID]
       ,[PracticeName]
       ,[PracticeAbbreviation]
       ,[PracticeDataSource]
-      ,c.CompanyName
+      ,c.CompanyName as PracticeCompany
       ,[PracticeIsActive]
       ,
 	  
@@ -68,7 +68,7 @@ CREATE VIEW [dim].[vPractices] as
       ,[PracticeGLLocationID]
       ,[PracticeGLLocation]
       ,[PracticeGLPracticeID]
-      ,s.SpecialtyName
+      ,s.SpecialtyName AS PracticeSpecialty
       ,null as [PracticeSameStoreDate]
 
 	        ,ss.StartDate as PracticeFirstDateActivity

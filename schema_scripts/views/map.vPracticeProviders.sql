@@ -3,7 +3,7 @@ CREATE View [map].[vPracticeProviders]
 as
 
 select pp.Id as PracticeProviderID
-      ,p.[PracticePracticeID]
+      ,p.[PracticePracticeID] as PracticeID
       ,p.[PracticeName]
       ,pr.[ProviderProviderID]
       ,[ProviderDataSourceID]
