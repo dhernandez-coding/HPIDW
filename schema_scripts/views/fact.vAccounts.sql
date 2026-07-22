@@ -55,6 +55,16 @@ SELECT
 			  WHEN a.AccountDataSourceID = 5 and a.AccountSourceID like '6%' THEN 'Yes' 
 			  --WHEN a.AccountSourceID like 'NoAccount%' THEN 'Yes' /*Scheduled surgeries without a hospital account*/
 			  ELSE 'No' END as AccountIsHospital
+	,CASE WHEN a.AccountTotalBalance = 0 THEN '99_ZeroBalance'
+		  WHEN DATEDIFF(DAY,a.AccountDateOfDischarge,GETDATE()) between 0 and 30 THEN '1) 0-30'
+		  WHEN DATEDIFF(DAY,a.AccountDateOfDischarge,GETDATE()) between 31 and 60 THEN '2) 31-60'
+		  WHEN DATEDIFF(DAY,a.AccountDateOfDischarge,GETDATE()) between 61 and 90 THEN '3) 61-90'
+		  WHEN DATEDIFF(DAY,a.AccountDateOfDischarge,GETDATE()) between 91 and 120 THEN '4) 91-120'
+		  WHEN DATEDIFF(DAY,a.AccountDateOfDischarge,GETDATE()) > 120 THEN '5) 121+'
+		  END as AccountARAgingBucket
+	, CASE WHEN a.AccountTotalBalance = 0 THEN DATEDIFF(DAY,a.AccountDateOfDischarge,a.AccountDateOfZeroBalance) 
+	       WHEN a.AccountTotalCharges > 0 THEN DATEDIFF(DAY,a.AccountDateOfDischarge,GETDATE())
+		   END as AccountARAgingDays
 	,AccountBeneficiaryNumber
 	,[AccountIsActive]
 	,[AccountUpdatedDatetime]
@@ -82,19 +92,8 @@ FROM [HPIDW].[fact].[Accounts] a
 			   GROUP BY 
 				d.VisitDiagnosisAccountID) dx ON dx.VisitDiagnosisAccountID = a.AccountID
 
-
-	--left join dim.vProviders prvpf ON prvpf.ProviderID = a.AccountPrimaryProviderID 
-			--left join dim.Specialties spcpf ON spcpf.SpecialtyID = prvpf.ParentSpecialtyID
-	 --Include back in once tx.TransactionAccountID is populated--
-	/*left join (select
-					t.TransactionVisitID
-					,sum(case when t.TransactionType = 'Charge' THEN t.TransactionAmount ELSE 0 END) as VisitTotalCharges
-					,sum(case when t.TransactionType = 'Payment' THEN t.TransactionAmount ELSE 0 END) * -1 as VisitTotalPayments 
-					,sum(case when t.TransactionType = 'Adjustment' THEN t.TransactionAmount ELSE 0 END) * -1 as VisitTotalAdjustments
-					,sum(t.TransactionAmount) as VisitTotalBalance
-				   from fact.Transactions t 
-				   group by t.TransactionVisitID) tx ON tx.TransactionAccountID = a.AccountID
-	*/
-
-	where year(a.AccountDateOfService) >= (year(getdate()) - 3)
+WHERE 1=1
+	AND a.AccountDateOfService >= DATEFROMPARTS(YEAR(GETDATE()) - 3, 1, 1)
+	--AND a.AccountDataSourceID = 5
+	--AND a.AccountSourceID like '6%'
 GO

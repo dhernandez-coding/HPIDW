@@ -108,6 +108,7 @@ CREATE PROCEDURE [stg].[spEPICReloadFactVisits2Full]
 	   where 1=1
 		AND e.ENC_TYPE_C in (3 /*Hospital Encounter*/
 							,50 /*Appointment*/
+							,53 /*Anesthesia Event*/
 							,101 /*Office Visit*/
 							,1003 /*Procedure Visit*/
 							,83 /*Pre-admission Testing*/

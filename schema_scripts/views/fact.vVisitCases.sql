@@ -81,6 +81,8 @@ SELECT
 	  ,p.ProviderFullName
       ,[VisitCaseTotalTimeNeeded]
       ,[VisitCaseLogStatus]
+	  ,tb.RoomScheduleStartDateTime  
+	  ,tb.RoomScheduleEndDateTime
       ,[VisitCaseScheduledORBeginDatetime]
       ,[VisitCaseScheduledOREndDatetime]
       ,[VisitCasePreOpBeginDatetime]
@@ -96,6 +98,7 @@ SELECT
       ,[VisitCaseMinutesScheduledInOR]
       ,[VisitCaseMinutesInPreop]
       ,[VisitCaseMinutesInOR]
+	  ,DATEDIFF(MINUTE,[VisitCaseProcedureBeginDatetime],[VisitCaseProcedureEndDatetime]) VisitCaseMinutesInProcedure
       ,[VisitCaseMinutesInRecovery]
       ,[VisitCaseMinutesInPhase2]
 	  ,[VisitCaseSetupMinutes]
@@ -148,84 +151,5 @@ FROM [HPIDW].[fact].[VisitCases] vc
 	LEFT JOIN Turnover t ON t.VisitCaseID = vc.VisitCaseID
 	LEFT JOIN TempBlocks tb ON tb.RoomID = vc.VisitCaseRoomID
 		 AND vc.VisitCaseScheduleStartDatetime >= tb.RoomScheduleStartDateTime  --RoomScheduleStartTime
-		 AND vc.VisitCaseScheduleEndDatetime   <= tb.RoomScheduleEndDateTime
-	--LEFT JOIN fact.Blocks b ON b.BlockRoomID = vc.VisitCaseRoomID
-	--	 AND vc.VisitCaseScheduleStartDatetime >= b.BlockScheduleStartTime  --RoomScheduleStartTime
-	--	 AND vc.VisitCaseScheduleEndDatetime   <= b.BlockScheduleEndTime
-		 --where vc.VisitCaseID = '5~2750513'
- --GROUP BY
- --     vc.VisitCaseID
- --     ,VisitCaseDatesourceID
- --     ,VisitCaseSourceID
- --     ,VisitCaseVisitID
- --     ,VisitCaseCSN
- --     ,VisitCaseLocationID
- --     ,l.LocationName
- --     ,VisitCaseServiceDate
- --     ,VisitCaseScheduledDatetime
- --     ,VisitCaseScheduleStartDatetime
- --     ,VisitCaseScheduleEndDatetime
- --     ,VisitCaseBeginDatetime
- --     ,VisitCaseEndDatetime
- --     ,VisitCaseRescheduledDate
- --     ,VisitCaseCancelledDate
- --     ,VisitCaseCancelledReason
- --     ,VisitCaseIsRescheduled
- --     ,VisitCaseORID
- --     ,vc.VisitCaseRoomID
- --     ,r.RoomName
- --     ,VisitCaseScheduleStatus
- --     ,VisitCasePatientClass
- --     ,VisitCaseService
- --     ,b.BlockCurrentName
- --     ,VisitCasePrimaryProviderID
- --     ,p.ProviderFullName
- --     ,VisitCaseTotalTimeNeeded
- --     ,VisitCaseLogStatus
- --     ,VisitCaseScheduledORBeginDatetime
- --     ,VisitCaseScheduledOREndDatetime
- --     ,VisitCasePreOpBeginDatetime
- --     ,VisitCasePreOpEndDatetime
- --     ,vc.VisitCaseORBeginDatetime
- --     ,VisitCaseProcedureBeginDatetime
- --     ,VisitCaseProcedureEndDatetime
- --     ,vc.VisitCaseOREndDatetime
- --     ,VisitCaseRecoveryBeginDatetime
- --     ,VisitCaseRecoveryEndDatetime
- --     ,VisitCasePhase2BeginDatetime
- --     ,VisitCasePhase2EndDatetime
- --     ,VisitCaseMinutesScheduledInOR
- --     ,VisitCaseMinutesInPreop
- --     ,VisitCaseMinutesInOR
- --     ,VisitCaseMinutesInRecovery
- --     ,VisitCaseMinutesInPhase2
- --     ,VisitCaseSetupMinutes
- --     ,VisitCaseCleanupMinutes
- --     ,VisitCaseScheduledTurnoverDuration
- --     ,VisitCaseRoomTurnoverDuration
- --     ,VisitCaseProcedureTurnoverDuration
- --     ,t.Next_ORBegin
- --     ,t.Next_ORBeginDate
- --     ,t.VisitCaseORBeginDatetime
- --     ,t.VisitCaseOREndDatetime
- --     ,VisitCaseMinutesLate
- --     ,VisitCaseLateStart
- --     ,VisitCaseMinutesOverrun
- --     ,VisitCaseLenghtDifferencePercent
- --     ,VisitCaseLengthAccuracy
- --     ,VisitCasePrimaryProcedure
- --     ,VisitCaseFirstCaseofDay
- --     ,VisitCaseNotPerformedReason
- --     ,VisitCaseNotPerformedComment
- --     ,VisitCaseAnesthesiaType
- --     ,VisitCaseASARating
- --     ,VisitCasePhysician
- --     ,VisitCaseCirculatingNurse
- --     ,VisitCaseSurgTech
- --     ,VisitCasePatientTemperaturePACUArrival
- --     ,VisitCaseAnesthesiaProviderID
- --     ,VisitCaseAdmissionStatus
- --     ,VisitCaseDischargeDisposition
- --     ,VisitCaseUpdatedDatetime
- --     ,sl.ServiceLineID;
+		 AND vc.VisitCaseScheduleEndDatetime   <= tb.RoomScheduleEndDateTime
 GO
