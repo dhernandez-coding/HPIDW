@@ -5,7 +5,7 @@ as
 select pp.Id as PracticeProviderID
       ,p.[PracticePracticeID] as PracticeID
       ,p.[PracticeName]
-      ,pr.[ProviderProviderID]
+      ,pr.[ProviderProviderID] as ProviderID
       ,[ProviderDataSourceID]
       ,null as [ParentProviderID]
       ,Concat(pr.ProviderFirstName, ' ',pr.ProviderMiddleInitial, ' ',pr.ProviderLastName) [ProviderFullName]

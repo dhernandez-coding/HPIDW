@@ -24,8 +24,8 @@ FROM clarity.[dbo].CLARITY_TBL t
               LEFT JOIN clarity.dbo.CLARITY_COL_INIITM ON CLARITY_COL.COLUMN_ID = CLARITY_COL_INIITM.COLUMN_ID AND CLARITY_COL_INIITM.LINE=1   
 WHERE 1=1
               AND LEFT(t.TABLE_ID,1) = ''C''  --> Custom tables
-              AND t.TABLE_NAME like ''%HSP_ACC%''
-			  --AND CLARITY_COL.COLUMN_NAME like ''%APPT_STATUS_C%''
+              --AND t.TABLE_NAME like ''%HSP_ACC%''
+			  AND CLARITY_COL.COLUMN_NAME like ''%ROOM%''
 			  --AND CLARITY_COL_INIITM.COLUMN_INI = ''ETR''
 			  --AND CLARITY_COL_INIITM.COLUMN_ITEM = ''0.10''
 ORDER BY

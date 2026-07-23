@@ -8,6 +8,8 @@ Change Control:
 	3. 10/28/2025 - Eric Silvestri	- Added ICD10 Codes
 	4. 6/2/2026 - Chris Cross - Replaced HPIApp.dbo.PBProcedureCategories with [HERO-DB].hpi.dbo.PBProcedureCategoriess to look at new HERO app
 	5. 6/2/2026 - Chris Cross - Updated PatientID to use the transaction patient ID first if populated
+	
+	6. 7/22/2026 - Logan Richardson - Replaced [HERO-DB].hpi.dbo.PBProcedureCategoriess with dim.vPBProcedureCategories
 */
 
 
@@ -174,7 +176,7 @@ FROM (
 		LEFT JOIN fact.Accounts a ON a.AccountID = t.TransactionAccountID -- for patient MRN 2/1/24 and employer 4/18/24
 		LEFT JOIN dim.Patients p ON p.PatientID = COALESCE(t.TransactionPatientID, a.AccountPatientID) -- for patient MRN 2/1/24
 		left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = COALESCE(t.TransactionCPTCode,t.TransactionCode) AND t.TransactionType = 'Charge'
-		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
+		left join dim.vPBProcedureCategories cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
 		left join dim.DataSources ds ON t.TransactionDatasourceID = ds.DataSourceID

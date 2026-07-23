@@ -3,7 +3,10 @@ BEGIN
 
 /* ##### STORED PROCEDURE ##### 
    #<Chris Cross - Author>#
-   #<Modified by Diego Hernandez - 10/30/2024># */
+   #<Modified by Diego Hernandez - 10/30/2024># 
+   1. 7/22/2026 - Logan Richardson	- Replaced hero db PBProcdureCategories with dim.vPBProcedureCategories
+   
+   */
 
 
  -- Clear existing records in the rpt.PBClosedClaims table to avoid duplicates
@@ -79,7 +82,7 @@ FROM
 	left join dim.PayerGroups pg ON pg.PayerGroupID = p.PayerGroupID																	
 	left join dim.vProviders pr ON pr.ProviderID = t2.TransactionBillingProviderID																	
 	left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = COALESCE(t2.TransactionCPTCode,t2.TransactionCode)
-	left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
+	left join dim.vPBProcedureCategories cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
 																			WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																			ELSE c.ProcedureCodeCategory END
 	left join (select 																	

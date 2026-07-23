@@ -1,5 +1,8 @@
 --I edited the MidLevel to a more loosy match condition so if is not on this list ('0~BlueCrossTraditional', '0~BlueAverage', '0~BlueCrossAdvantage','0~BlueCrossChoice', '0~BlueCrossPreferred') we are not pulling the midlevel values
+/***
+7/22/2026 - Logan RIchardson - Replaced direct hero db reference to PBProcedureCategories to dim.vPBProcedureCategories
 
+***/
 
 
 
@@ -216,7 +219,7 @@ FROM (
 		LEFT JOIN fact.Accounts a ON a.AccountID = t.TransactionAccountID -- for patient MRN 2/1/24 and employer 4/18/24
 		LEFT JOIN dim.Patients p ON p.PatientID = a.AccountPatientID -- for patient MRN 2/1/24
 		left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = COALESCE(t.TransactionCPTCode,t.TransactionCode) AND t.TransactionType = 'Charge'
-		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
+		left join dim.vPBProcedureCategories cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
 		left join dim.DataSources ds ON t.TransactionDatasourceID = ds.DataSourceID

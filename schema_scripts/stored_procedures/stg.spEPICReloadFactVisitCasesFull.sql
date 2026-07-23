@@ -102,21 +102,25 @@
     DROP TABLE #Laterality;
 
 	CREATE TABLE #Laterality (
-    VisitCaseID NVARCHAR(50),  -- Adjust the datatype if needed
-    Lateralities NVARCHAR(MAX)  -- Assuming STRING_AGG results in a long string
-	);
-	-- Step 2: Insert data into the temp table
-	INSERT INTO #Laterality (VisitCaseID, Lateralities)
-		SELECT
-			orc.or_case_id AS VisitCaseID,
-			STRING_AGG(lrb.NAME, '/ ') AS Lateralities
-		FROM 
-			[CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].OR_CASE orc
-		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].OR_CASE_ALL_PROC cp 
-			ON cp.OR_CASE_ID = orc.OR_CASE_ID AND cp.LINE = 1
-		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].ZC_OR_LRB lrb 
-			ON lrb.LRB_C = cp.LRB_C
-		GROUP BY orc.or_case_id;
+    VisitCaseID NVARCHAR(50),
+    Lateralities NVARCHAR(MAX)
+);
+-- Step 2: Insert data into the temp table using OPENQUERY
+INSERT INTO #Laterality (VisitCaseID, Lateralities)
+SELECT 
+    VisitCaseID, 
+    Lateralities
+FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
+    SELECT
+        orc.or_case_id AS VisitCaseID,
+        STRING_AGG(lrb.NAME, ''/ '') AS Lateralities
+    FROM CLARITY.ORGFILTER.OR_CASE orc
+    LEFT JOIN CLARITY.ORGFILTER.OR_CASE_ALL_PROC cp 
+        ON cp.OR_CASE_ID = orc.OR_CASE_ID AND cp.LINE = 1
+    LEFT JOIN CLARITY.ORGFILTER.ZC_OR_LRB lrb 
+        ON lrb.LRB_C = cp.LRB_C
+    GROUP BY orc.or_case_id
+');
 
 
 	PRINT 'Inserting records from Datasource into @StagingTable....'

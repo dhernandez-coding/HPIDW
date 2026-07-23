@@ -9,18 +9,50 @@ WITH TempBlocks AS
         , rt.SCHEDULE_DATE AS RoomScheduleDate
 
         -- Build true DATETIME block start/end from date + time
-        , DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS time), CAST(rt.SLOT_START_TIME AS time)),
-                  CAST(rt.SCHEDULE_DATE AS datetime)) AS RoomScheduleStartDateTime
+        , DATEADD(
+              SECOND,
+              DATEDIFF(
+                  SECOND,
+                  CAST('00:00:00' AS TIME),
+                  CAST(rt.SLOT_START_TIME AS TIME)
+              ),
+              CAST(rt.SCHEDULE_DATE AS DATETIME)
+          ) AS RoomScheduleStartDateTime
 
-        , DATEADD(SECOND, DATEDIFF(SECOND, CAST('00:00:00' AS time), CAST(rt.SLOT_END_TIME AS time)),
-                  CAST(rt.SCHEDULE_DATE AS datetime)) AS RoomScheduleEndDateTime
+        , DATEADD(
+              SECOND,
+              DATEDIFF(
+                  SECOND,
+                  CAST('00:00:00' AS TIME),
+                  CAST(rt.SLOT_END_TIME AS TIME)
+              ),
+              CAST(rt.SCHEDULE_DATE AS DATETIME)
+          ) AS RoomScheduleEndDateTime
 
         , rt.SLOT_TYPE_NM AS RoomScheduleSlotType
-        , rt.SURGEON_ID   AS RoomScheduleProviderID
+        , rt.SURGEON_ID AS RoomScheduleProviderID
         , p.ProviderFullName AS RoomScheduleBlockName
-        , rt.BLOCK_KEY    AS RoomScheduleBlockKey
-        , rt.COMMENTS     AS RoomScheduleComments
-    FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].V_OR_ROOM_TEMPLATE rt
+        , rt.BLOCK_KEY AS RoomScheduleBlockKey
+        , rt.COMMENTS AS RoomScheduleComments
+	FROM OPENQUERY(
+        [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
+        '
+            SELECT
+                  ROOM_ID
+                , SCHEDULE_DATE
+                , SLOT_START_TIME
+                , SLOT_END_TIME
+                , SLOT_TYPE_NM
+                , SURGEON_ID
+                , BLOCK_KEY
+                , COMMENTS
+            FROM CLARITY.ORGFILTER.V_OR_ROOM_TEMPLATE t
+				LEFT JOIN CLARITY.DBO.OR_SER_ROOM r ON PROV_ID = t.ROOM_id
+			WHERE 1=1
+				and t.SCHEDULE_DATE >= ''1/1/2023''
+				and LEFT (r.PROV_ABB, 3) IN (''CHS'',''CHN'') 
+        '
+    ) rt  
     INNER JOIN hpidw.dim.Rooms r
         ON r.RoomDataSourceID = 5
        AND r.RoomSourceID = rt.ROOM_ID

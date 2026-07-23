@@ -15,10 +15,11 @@ CREATE PROCEDURE [stg].[spEPICReloadFactTransactionsPBFull] as
 -- 12/1/2025 - Eric Silvestri	- Added TransactionActiveARAmount, and TransactionAmount
 -- 1/27/2026 - Chris Cross - Revised substantially to remove unnecessary DETAIL_TYPEs (see zzDEPRECATED version for old logic*/
 -- 3/31/2026 - Chris Cross - Added service area 452000 for Dr. Chris Harris*/
+-- 7/22/2026 - Logan Richardson - Replaced Hero db reference with dim.vPBProcedureCategories, dim.vPBProcedureCodes, dim.vServiceLines, and dim.vDHSCategories*/
 -- =============================================
 
 BEGIN
-
+--select * from dim.vServiceLines
 /*Step 0:  Load temp table for procedure code mapping from HERO-DB...*/
 PRINT 'Load #TEMP_ProcedureCodeMapping...'
 	DROP TABLE IF EXISTS #TEMP_ProcedureCodeMapping
@@ -36,10 +37,10 @@ PRINT 'Load #TEMP_ProcedureCodeMapping...'
 		,c.ModifiedDate
 		,c.ModifiedBy
 	INTO #TEMP_ProcedureCodeMapping
-	FROM [HERO-DB].hpi.dbo.PBProcedureCodess c 
-		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess pc ON pc.id = c.ProcedureCodeCategoryID
-		left join [HERO-DB].hpi.dbo.ServiceLiness sl ON sl.ServiceLineid = c.ProcedureCodeServiceLineId
-		left join [HERO-DB].hpi.dbo.DHSCategoriess dhs ON dhs.DHSCategoryID = c.ProcedureCodeDHSCategoryId
+	FROM dim.vPBProcedureCodes c 
+		left join dim.vPBProcedureCategories pc ON pc.id = c.ProcedureCodeCategoryID
+		left join dim.vServiceLines sl ON sl.ServiceLineid = c.ProcedureCodeServiceLineId
+		left join dim.vDHSCategories dhs ON dhs.DHSCategoryID = c.ProcedureCodeDHSCategoryId
 	WHERE 1=1
 		AND c.ProcedureCodeCategoryID is not null
  

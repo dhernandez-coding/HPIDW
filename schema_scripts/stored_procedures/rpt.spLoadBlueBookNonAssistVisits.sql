@@ -13,6 +13,7 @@ Change Control:
 	4. 3/24/26 - Chris Cross - Updated procedure category mapping to reference HPIApp tables
 	5. 6/2/2026 - Chris Cross - Replaced HPIApp.dbo.PBProcedureCategories with [HERO-DB].hpi.dbo.PBProcedureCategoriess to look at new HERO app
 	6. 6/11/2026 - Diego Hernandez - Added Data Source 15
+	6. 7/22/2026 - Logan Richardson - Removed the direct [hero-db] linking
 */
 
 SET NOCOUNT OFF
@@ -72,12 +73,13 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 	into #TempCharges
 
 	--select t.*
+	--select * from dim.vPBProcedureCategories
 	FROM fact.TransactionsPB t
 		left join dim.Departments d ON d.DepartmentID = t.TransactionDepartmentID
 		left join dim.vProviders p ON p.ProviderID = t.TransactionBillingProviderID
 		left join dim.DataSources ds ON ds.DataSourceID = t.TransactionDatasourceID
 		left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = COALESCE(t.TransactionCPTCode,t.TransactionCode)
-		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess pc ON pc.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
+		left join dim.vPBProcedureCategories pc ON pc.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
 		left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID

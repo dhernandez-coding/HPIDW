@@ -5,6 +5,7 @@ CREATE VIEW [rpt].[vPBChargeDetail] as
 		1. 9/4/24 - Chris Cross - Replaced fact.Transactions2 with fact.TransactionsPB
 		2. 9/30/24 - Eric Silvestri - added TransactionPatientID to join dim.Patients in PBI
 		3. 6/2/2026 - Chris Cross - Replaced HPIApp.dbo.PBProcedureCategories with [HERO-DB].hpi.dbo.PBProcedureCategoriess to look at new HERO app
+		3. 7/22/2026 - Logan Richardson - Replaced [HERO-DB].hpi.dbo.PBProcedureCategoriess with dim.vPBProcedureCategories
 */
 
 select																		
@@ -39,7 +40,7 @@ from fact.TransactionsPB t2
 	left join dim.PayerGroups pg ON pg.PayerGroupID = p.PayerGroupID																	
 	left join dim.vProviders pr ON pr.ProviderID = t2.TransactionBillingProviderID																	
 	left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = t2.TransactionCode																	
-	left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 																	
+	left join dim.vPBProcedureCategories cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 																	
 																		  WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																		  ELSE c.ProcedureCodeCategory END
 	left join (select 																	

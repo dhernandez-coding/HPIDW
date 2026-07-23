@@ -7,6 +7,7 @@ Change Control:
 	3. 7/24/25 - Chris Cross - Added VisitDateOfService to primary key due to generic visits spanning multiple days (ex. Shadid and Neese 5~30198848168)
 	4. 1/8/26 - Diego Hernandez - Added datasource 15 to the where clause to include Modmed and included an exclusion for visit id null that i need to revisit
 	5. 6/2/2026 - Chris Cross - Replaced HPIApp.dbo.PBProcedureCategories with [HERO-DB].hpi.dbo.PBProcedureCategoriess to look at new HERO app
+	6. 7/22/2026 - Logan Richardson - Replaced [Hero-DB] reference with dim.vPBProcedureCategories
 */
 
 TRUNCATE TABLE rpt.BlueBookVisitInfo
@@ -33,11 +34,11 @@ FROM (
 	t.TransactionVisitID
 	,t.TransactionDateOfService
 	,min(cat.ProcedureCategoryPriority) as ProcedureCategoryPriority
-
+	--select * from hpi_etl.dbo.PBProcedureCategoriess
 	FROM fact.TransactionsPB t
 		left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID
 		left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = COALESCE(t.TransactionCPTCode,t.TransactionCode)
-		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
+		left join dim.vPBProcedureCategories cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
 																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																				ELSE c.ProcedureCodeCategory END
 	WHERE 1=1
@@ -57,7 +58,7 @@ FROM (
 
 
 	) sub
-	left join [HERO-DB].hpi.dbo.PBProcedureCategoriess pc ON pc.ProcedureCategoryPriority = sub.ProcedureCategoryPriority
+	left join dim.vPBProcedureCategories pc ON pc.ProcedureCategoryPriority = sub.ProcedureCategoryPriority
 
 	--select * from fact.Transactions2 t2 where  t2.TransactionVisitID = '5~30173022350'
 

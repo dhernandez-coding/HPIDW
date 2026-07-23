@@ -15,6 +15,8 @@ CREATE PROCEDURE [stg].[spEPICReloadFactTransactionsPBIncremental] as
 -- 12/1/2025 - Eric Silvestri	- Added TransactionActiveARAmount, and TransactionAmount
 -- 2/5/2026 - Chris Cross - Revised substantially 
 -- 3/31/2026 - Chris Cross - Added service area 452000 for Dr. Chris Harris
+
+-- 7/22/2026 - Logan RIchardson - Replaced direct hero db references with local dim.v views. 
 -- =============================================
 
 BEGIN
@@ -36,10 +38,10 @@ PRINT 'Load #TEMP_ProcedureCodeMapping...'
 		,c.ModifiedDate
 		,c.ModifiedBy
 	INTO #TEMP_ProcedureCodeMapping
-	FROM [HERO-DB].hpi.dbo.PBProcedureCodess c 
-		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess pc ON pc.id = c.ProcedureCodeCategoryID
-		left join [HERO-DB].hpi.dbo.ServiceLiness sl ON sl.ServiceLineid = c.ProcedureCodeServiceLineId
-		left join [HERO-DB].hpi.dbo.DHSCategoriess dhs ON dhs.DHSCategoryID = c.ProcedureCodeDHSCategoryId
+	FROM dim.vPBProcedureCodes c 
+		left join dim.vPBProcedureCategories pc ON pc.id = c.ProcedureCodeCategoryID
+		left join dim.vServiceLines sl ON sl.ServiceLineid = c.ProcedureCodeServiceLineId
+		left join dim.vDHSCategories dhs ON dhs.DHSCategoryID = c.ProcedureCodeDHSCategoryId
 	WHERE 1=1
 		AND c.ProcedureCodeCategoryID is not null
  
