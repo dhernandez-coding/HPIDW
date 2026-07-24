@@ -1,4 +1,4 @@
-CREATE view [map].[vProviderLinking]
+create view map.zzvProviderLinking
 with schemabinding as
 select [ID]
       ,[ParentProviderID]
@@ -7,7 +7,7 @@ select [ID]
       ,[ProviderLinkingCreatedDatetime]
       ,[ProviderLinkingUpdatedDatetime]
       ,[ProviderLinkingIsActive] 
-from hero._vProviderLinking 
+from dbo._vProviderLinking 
 WHERE EXISTS (
     SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 1
 )

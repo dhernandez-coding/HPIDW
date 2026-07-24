@@ -1,4 +1,5 @@
-CREATE VIEW [dim].[vPractices] as
+CREATE VIEW [dim].[vPractices]
+ with schemabinding as
  
  WITH SameStoreMap AS (
 
@@ -74,10 +75,10 @@ CREATE VIEW [dim].[vPractices] as
 	        ,ss.StartDate as PracticeFirstDateActivity
       ,ss.StartDate as zPracticeSameStoreDate
  ,SameStoreEndDate 
-	  from hpi_etl.dbo.practicess p
-	  left join  hpi_etl.dbo.companiess c on p.CompanyID = c.CompanyID
+	  from hero.practicess p
+	  left join  hero.companiess c on p.CompanyID = c.CompanyID
 	  
-	  left join  hpi_etl.dbo.specialtiess s on p.SpecialtyID = s.SpecialtyID
+	  left join  hero.specialtiess s on p.SpecialtyID = s.SpecialtyID
 	  LEFT JOIN SameStoreMap ss 
     ON ss.PracticeID = p.PracticePracticeID
 	  WHERE EXISTS (
@@ -172,7 +173,7 @@ UNION ALL
       ,ss.EndDate as SameStoreEndDate
 
 
-FROM [HPIDW].[dim].[Practices] p
+FROM [dim].[Practices] p
 LEFT JOIN SameStoreMap ss 
     ON ss.PracticeID = p.PracticeID
 WHERE 1=1 and

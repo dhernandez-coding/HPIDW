@@ -1,23 +1,15 @@
-CREATE view [dbo].[_vProviders] as 
-
+CREATE view [hero].[_vProviders]  
+with schemabinding as
 --DROP TABLE IF EXISTS #tempProviderAliases;
 --DROP TABLE IF EXISTS #tempSourceSystems;
 --DROP TABLE IF EXISTS #tempProviders;
 
 
-with tempProviderAliases as (
-select pa.*, concat(pa.SourceSystemId, '~', value) as MappedId  from hpi_etl.dbo.ProviderAliases pa
-),
-tempSourceSystems as (
-select * from hpi_etl.dbo.SourceSystems
-),
-tempProviders as (
-select * from hpi_etl.dbo.Providerss
-)
+
 
 
 SELECT
-	pa.MappedId,
+	concat(pa.SourceSystemId, '~', pa.value) as MappedId,
 	p.[ProviderID]
 	,p2.ProviderID ParentProviderID
 	,tp.[ProviderDataSourceID]
@@ -49,14 +41,14 @@ SELECT
 	,p.[ProviderUpdatedDateTime]
 
 	--select * from [HPIDW].[dim].[Providers] p
-FROM [HPIDW].[dim].[Providers] p
-	left join tempSourceSystems ds ON ds.id = p.ProviderDataSourceID
-	left join tempProviderAliases pa on p.ProviderID = MappedId --MappedId is built when buildint the temp table this is sourced from #LRR
+FROM [dim].[Providers] p
+	left join hero.SourceSystems ds ON ds.id = p.ProviderDataSourceID
+	left join hero.ProviderAliases pa on p.ProviderID = concat(pa.SourceSystemId, '~', pa.value) --MappedId is built when buildint the temp table this is sourced from #LRR
 
-	left join hpidw.map.vProviderLinking pl on p.ProviderID = pl.ChildProviderID
+	left join map.vProviderLinking pl on p.ProviderID = pl.ChildProviderID
 	left join dim.Providers p2 on pl.ParentProviderID = p2.ProviderID
 	left join dim.Specialties s ON s.SpecialtyID = coalesce(p2.ProviderSpecialtyID, p.[ProviderSpecialtyID])
-	left join tempProviders tp on p.ProviderID = tp.ProviderProviderId
+	left join hero.Providerss tp on p.ProviderID = tp.ProviderProviderId
 
 	--left join (select a.AccountAttendingProviderID 
 	--			from fact.Accounts a 

@@ -1,5 +1,5 @@
 CREATE View [map].[vPracticeProviders] 
---WITH SCHEMABINDING
+WITH SCHEMABINDING
 as
 
 select pp.Id as PracticeProviderID
@@ -26,11 +26,11 @@ select pp.Id as PracticeProviderID
       ,[PracticeProviderGLType]
       ,[PracticeProviderGLTypeID]
       ,[PracticeProviderGLProviderID]
-      ,[PracticeProviderDHSType] from hpi_etl.dbo.PracticeProviderss pp
-	  left join hpi_etl.dbo.PRacticess p on pp.PracticeID = p.PracticeID 
-	  left join hpi_etl.dbo.Providerss pr on pp.ProviderID = pr.ProviderID
-	  left join hpi_etl.dbo.ProviderAliases pa on pr.PRoviderID = pa.Id
-	  left join hpi_etl.dbo.Locationss l on pp.PracticeProviderLocation = l.LocationID
+      ,[PracticeProviderDHSType] from hero.PracticeProviderss pp
+	  left join hero.PRacticess p on pp.PracticeID = p.PracticeID 
+	  left join hero.Providerss pr on pp.ProviderID = pr.ProviderID
+	  left join hero.ProviderAliases pa on pr.PRoviderID = pa.Id
+	  left join hero.Locationss l on pp.PracticeProviderLocation = l.LocationID
 WHERE EXISTS (
     SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 1
 )

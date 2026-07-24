@@ -1,5 +1,5 @@
-CREATE view [dim].[vProviders] as
-
+CREATE view [dim].[vProviders] 
+with schemabinding as
 
 SELECT [ProviderID]
       ,[ParentProviderID]
@@ -27,7 +27,7 @@ SELECT [ProviderID]
       ,[ProviderNPI]
       ,[ProviderIsActive]
       ,[ProviderUpdatedDateTime]
-FROM dbo._vProviders
+FROM hero._vProviders
 WHERE EXISTS (
     SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 1
 )
@@ -64,9 +64,9 @@ SELECT
 	,p.[ProviderIsActive]
 	--,CASE WHEN p2.ProviderID = '0~1255384483' THEN '2024-07-01' ELSE NULL END AS ProviderRVUEffectiveDate -- Date for Providers that have change in RVU Target
 	,p.[ProviderUpdatedDateTime]
-FROM [HPIDW].[dim].[Providers] p
-	left join [HPIDW].[dim].[DataSources] ds ON ds.DataSourceID = p.ProviderDataSourceID
-	left join hpidw.map.vProviderLinking pl on p.ProviderID = pl.ChildProviderID
+FROM [dim].[Providers] p
+	left join [dim].[DataSources] ds ON ds.DataSourceID = p.ProviderDataSourceID
+	left join map.vProviderLinking pl on p.ProviderID = pl.ChildProviderID
 	left join dim.Providers p2 on pl.ParentProviderID = p2.ProviderID
 	left join dim.Specialties s ON s.SpecialtyID = coalesce(p2.ProviderSpecialtyID, p.[ProviderSpecialtyID])
 	--left join (select a.AccountAttendingProviderID 
