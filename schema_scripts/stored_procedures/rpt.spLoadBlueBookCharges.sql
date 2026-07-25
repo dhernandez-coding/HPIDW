@@ -12,7 +12,8 @@ Change Control:
 	2. 4/30/25 - Chris Cross - Added "when t.TransactionDepartmentID = '5~42501006002' THEN 'Shadid Choctaw' --Checks if Choctaw department for Shadid" for ReportGroupLevel4
 	3. 5/8/25 - Chris Cross - Added "when t.TransactionDepartmentID = '5~42501006001' THEN 'Shadid Edmond' --Checks if Edmond department for Shadid for ReportGroupLevel4
 	4. 6/4/25 - Eric Silvestri - Added datasource 12 to the where clause to include HPI Customer data 
-	5. 1/8/26 - Diego Hernandez - Added datasource 15 to the where clause to include Modmed 
+	5. 1/8/26 - Diego Hernandez - Added datasource 15 to the where clause to include Modmed
+	6. 7/24/26  - Diego Hernandez - Added cases for mapping providers that appear multiple times on THP 
 */
 
 
@@ -129,8 +130,38 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 												OR (pl.ParentProviderID in ('0~1306817887') 
 													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~JCB') ) )
 												
-												/*All other providers without specific mapping issues due to multiple practices as defined above*/
-												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887'))
+
+												---THP BLOCK---
+												/*Added to handle duplicates for Audra S. Ball at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1841337631') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~ACC')
+																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~PDR'))) )
+
+												
+												/*Added to handle duplicates for Holly A. Goracke at multiple practices*/
+									OR (pl.ParentProviderID in ('0~1659695450') 
+										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~HAG')
+																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~HAG'))) )
+									/*Added to handle duplicates for Russell D. Ingram at multiple practices*/
+									OR (pl.ParentProviderID in ('0~1043475353') 
+										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~RDI')
+																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~RDI'))) )
+									/*Added to handle duplicates for Anton Dreier at multiple practices*/
+									OR (pl.ParentProviderID in ('0~1780112706') 
+										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~ANT')
+																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~AD'))) )
+									/*Added to handle duplicates for Stuart H. Lisle at multiple practices*/
+									OR (pl.ParentProviderID in ('0~1447541750') 
+										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~SJL')
+																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~SJL'))) )
+									/*Added to handle duplicates for Dustin R. Baker at multiple practices*/
+									OR (pl.ParentProviderID in ('0~1154360436') 
+										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~DRB')
+																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~DRB'))) )
+								 --- THP BLOCK
+
+												/*All other providers without specific mapping issues due to multiple practices as defined above*/ -- Added  '0~1841337631' '0~1659695450','0~1043475353','0~1780112706','0~1447541750','0~1154360436'
+												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887','0~1841337631','0~1659695450','0~1043475353','0~1780112706','0~1447541750','0~1154360436'))
 												
 			left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 			left join dim.Payers py ON py.PayerID = t.TransactionPayerID
