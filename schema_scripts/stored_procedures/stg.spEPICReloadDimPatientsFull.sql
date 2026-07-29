@@ -11,6 +11,7 @@
 --  6. 05/09/2025 - Diego Hernandez - Added safe load
 --  7. 10/29/2025 - Diego Hernandez - Added openquery
 --  8. 06/02/2026 - Chris Cross - Added subquery to pull 425000 service area records not included in ORGFILTER
+--  9. 07/28/2026 - Chris Cross - updated subquery to pull 425000,430,425 service area records not included in ORGFILTER
 -- =============================================
 CREATE PROCEDURE [stg].[spEPICReloadDimPatientsFull] AS
 BEGIN
@@ -115,14 +116,16 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
     FROM (SELECT
 			sub.PAT_ID
 		  FROM (
+
 			select 
-				pe.PAT_ID
-			from [Clarity].[dbo].[PAT_ENC] pe 
-				left join [Clarity].[dbo].CLARITY_DEP d ON d.DEPARTMENT_ID = pe.DEPARTMENT_ID
+				tx.PATIENT_ID as PAT_ID
+			from [Clarity].[dbo].[ARPB_TRANSACTIONS] tx
+				left join [Clarity].[dbo].CLARITY_DEP d ON d.DEPARTMENT_ID = tx.DEPARTMENT_ID
 			where 1=1 
-				AND d.SERV_AREA_ID IN (452000)
+				--AND TX_ID = 103562969
+				AND d.SERV_AREA_ID IN (452000,425,430)
 			group by 
-				pe.PAT_ID
+				tx.PATIENT_ID
 																	
 			UNION ALL 
 			

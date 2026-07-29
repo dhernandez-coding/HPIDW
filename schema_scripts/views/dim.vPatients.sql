@@ -24,10 +24,11 @@ SELECT
 	, PatientIsActive
 	, PatientUpdatedDateTime
 	, PatientMedicareNumber
+
 FROM dim.Patients p
 WHERE (1 = 1) 
-	AND (PatientDataSourceID IN (1,12,15)
-	OR (PatientID IN (
-			SELECT DISTINCT AccountPatientID
-			FROM fact.Accounts a)))
+	AND (PatientDataSourceID IN (1,12,15,5))
+	--OR (PatientID IN (
+	--		SELECT DISTINCT AccountPatientID
+	--		FROM fact.Accounts a)))
 GO

@@ -1,4 +1,4 @@
-create view dim.vPBProcedureCategories as
+CREATE view [dim].[vPBProcedureCategories] as
 
 SELECT [Id]
       ,[ProcedureCategory]
@@ -12,5 +12,5 @@ SELECT [Id]
       ,[DeletedDate]
       ,[DeletedBy]
       ,[IsActive]
-  FROM [hpi_etl].[dbo].[PBProcedureCategoriess]
+  FROM hero.PBProcedureCategoriess --[hpi_etl].[dbo].[PBProcedureCategoriess]
 GO
