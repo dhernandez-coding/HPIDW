@@ -849,16 +849,37 @@ UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, Pract
 /*7.1.26 Added Kenzie V. Hart to ACC*/
 INSERT INTO map.PracticeProviders SELECT '0~ACC','5~P1040276','KVH',0,'5/26/2026','12/31/2099',1,getdate(),1,0,NULL,1,1,'PA',11,130,2
 
-
 /*7.10.26 Added Logan Roles to PBJ*/
 INSERT INTO map.PracticeProviders SELECT '0~PBJ','5~145436','LCR',0,'6/22/2026','12/31/2099',1,getdate(),1,0,NULL,1,1,'PA',11,129,2
 
-	select * from map.vPracticeProviders p where p.PracticeID = '0~acc'
+/*7.31.26 Updated Provider Allocations for PBJ Per Nick*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = '0.25',PracticeProviderUpdatedDatetime = GETDATE() WHERE PracticeID = '0~PBJ' AND PracticeProviderID = '43'
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = '0.25',PracticeProviderUpdatedDatetime = GETDATE() WHERE PracticeID = '0~PBJ' AND PracticeProviderID = '32'
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = '0.25',PracticeProviderUpdatedDatetime = GETDATE() WHERE PracticeID = '0~PBJ' AND PracticeProviderID = '45'
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = '0.25',PracticeProviderUpdatedDatetime = GETDATE() WHERE PracticeID = '0~PBJ' AND PracticeProviderID = '287'
+
+/*7.31.26 Added Christopher Shane Hume to CSH2*/
+INSERT INTO map.PracticeProviders SELECT '0~CSH2','5~102495','CSH',1,'7/22/2026','12/31/2099',1,getdate(),1,1,null,1,0,NULL,NULL,NULL,NULL
+
+/*7.31.26 Added Erin L. Balzer to ELB*/
+INSERT INTO map.PracticeProviders SELECT '0~ELB','5~P1001909','ELB',1,'7/29/2026','12/31/2099',1,getdate(),1,1,null,0,0,NULL,NULL,NULL,NULL
+
+/*7.31.26 Added Michael Harvey to MRH*/
+INSERT INTO map.PracticeProviders SELECT '0~MRH','5~137443','MRH',1,'7/29/2026','12/31/2099',1,getdate(),1,1,null,0,0,NULL,NULL,NULL,NULL
+
+/*7.31.26 - Per Nick - Updates to ACC - Remove Audra Ball from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~ACC' and ProviderID = '1~19830'
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = 0.5, PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~ACC' and ProviderID in ('1~13939','5~P1040276')
+
+
+
+
+	select * from map.vPracticeProviders p where p.PracticeID like '0~ACC%'
 	
-	select * from map.vPracticeProviders p where p.PracticeID = '0~NRJ'
-	select * from dim.Practices p where p.PracticeName like '%Harris%'
+	select * from map.vPracticeProviders p where p.ProviderFullName like '%PAPE%'
+	select * from dim.Practices p where p.PracticeName like '%balzer%'
 	
-select * from dim.vProviders p where p.ProviderFullName like '%HART, KEN%'
+select * from dim.vProviders p where p.ProviderFullName like '%balzer, e%'
 
 	select * from dim.vProviders p where p.providerdatasourceid = 10 and providerfullname like '%Nguyen%' order by Providerupdateddatetime
 

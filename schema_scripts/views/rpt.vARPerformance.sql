@@ -1,5 +1,6 @@
 CREATE VIEW [rpt].[vARPerformance]
 AS
+
 WITH BlueBooksBase AS
 (
     SELECT
@@ -16,10 +17,7 @@ WITH BlueBooksBase AS
         , CASE WHEN bb.ReportSection IN ('Revenue', 'Expenses')
                   THEN RIGHT(bb.ReportGroupLevel2,LEN(bb.ReportGroupLevel2) - 3) ELSE bb.ReportGroupLevel2 END AS ReportGroupLevel2Clean
         , bb.ReportGroupLevel3
-        
-        -- Re-categorize adjustments mapped as '1_Charge' inside the view so they don't clean to 'Charge'
-        , CASE WHEN bb.ReportSection = 'Adjustments' AND bb.ReportGroupLevel3 = '1_Charge' THEN 'Contractual Adjustment'
-                WHEN bb.ReportSection IN ('Revenue', 'Expenses') THEN RIGHT(bb.ReportGroupLevel3,LEN(bb.ReportGroupLevel3) - 3)
+        , CASE WHEN bb.ReportSection IN ('Revenue', 'Expenses') THEN RIGHT(bb.ReportGroupLevel3,LEN(bb.ReportGroupLevel3) - 3)
                 WHEN bb.ReportGroupLevel3 IN
                                             (
                                                 '1_Charge'
@@ -33,6 +31,7 @@ WITH BlueBooksBase AS
                                               , '99_No Category'
                                             )
                   THEN RIGHT(bb.ReportGroupLevel3,LEN(bb.ReportGroupLevel3) - 2) ELSE bb.ReportGroupLevel3 END AS ReportGroupLevel3Clean
+
         , bb.ReportGroupLevel4
         , bb.PracticeID
         , bb.ReportingProviderID
@@ -42,9 +41,14 @@ WITH BlueBooksBase AS
         , CASE WHEN bb.ReportSection LIKE '%Charge Lag%' OR bb.ReportSection LIKE '%Payment Lag%' THEN 'Fraction' ELSE 'Sum' END AS FiscalPeriodValueType
         , 'Actual' AS ReportSectionType
         , bb.UpdatedDatetime
+
     FROM [HPIDW].[rpt].[BlueBooks] bb
+
     WHERE bb.ReportSection IN ('Charges', 'Payments', 'Adjustments')
+      -- Exclude adjustments mapped as '1_Charge' completely so they don't show up in any category
+      AND NOT (bb.ReportSection = 'Adjustments' AND bb.ReportGroupLevel3 = '1_Charge')
 ),
+
 MonthlyAR AS
 (
     SELECT
@@ -53,6 +57,7 @@ MonthlyAR AS
         , FiscalYearPeriod
         , FiscalPeriodDate
         , PracticeID
+
         , SUM
           (
               CASE
@@ -63,22 +68,23 @@ MonthlyAR AS
                   ELSE 0
               END
           ) AS Charges
+
         , SUM
           (
               CASE
-                  -- Include 'Charge' adjustments inside general Adjustments
+                  -- Standard adjustments (mapped adjustment charges excluded via WHERE clause)
                   WHEN ReportSection = 'Adjustments'
                    AND ReportGroupLevel3Clean IN
                        (
                            'Contractual Adjustment',
                            'Admin Write Off',
-                           'Payer Determination Adjustment',
-                           'Charge'
+                           'Payer Determination Adjustment'
                        )
                       THEN COALESCE(FiscalPeriodValue, 0)
                   ELSE 0
               END
           ) AS Adjustments
+
         , SUM
           (
               CASE
@@ -89,6 +95,7 @@ MonthlyAR AS
                   ELSE 0
               END
           ) AS BadDebt
+
         , SUM
           (
               CASE
@@ -103,6 +110,7 @@ MonthlyAR AS
                   ELSE 0
               END
           ) AS NetPayments
+
         , SUM
           (
               CASE
@@ -118,7 +126,9 @@ MonthlyAR AS
           ) AS GrossPayments
         , ReportingProviderID
         , MAX(UpdatedDatetime) AS UpdatedDatetime
+
     FROM BlueBooksBase
+
     GROUP BY
           FiscalYear
         , FiscalPeriod
@@ -127,6 +137,7 @@ MonthlyAR AS
         , PracticeID
         , ReportingProviderID
 ),
+
 MonthlyCalculations AS
 (
     SELECT
@@ -146,8 +157,10 @@ MonthlyCalculations AS
         , NetPayments / NULLIF(Charges - Adjustments, 0.0) AS NetCollectionRate
         , 1.0 - ((Charges - Adjustments - NetPayments - BadDebt) / NULLIF(Charges, 0.0)) AS ARResolution
         , UpdatedDatetime
+
     FROM MonthlyAR
 ),
+
 CalculatedRows AS
 (
     SELECT
@@ -172,8 +185,11 @@ CalculatedRows AS
         , 'Sum' AS FiscalPeriodValueType
         , 'Actual' AS ReportSectionType
         , UpdatedDatetime
+
     FROM MonthlyCalculations
+
     UNION ALL
+
     SELECT
           NULL
         , FiscalYear
@@ -196,8 +212,11 @@ CalculatedRows AS
         , 'Percent'
         , 'Actual'
         , UpdatedDatetime
+
     FROM MonthlyCalculations
+
     UNION ALL
+
     SELECT
           NULL
         , FiscalYear
@@ -220,8 +239,11 @@ CalculatedRows AS
         , 'Percent'
         , 'Actual'
         , UpdatedDatetime
+
     FROM MonthlyCalculations
+
     UNION ALL
+
     SELECT
           NULL
         , FiscalYear
@@ -244,8 +266,11 @@ CalculatedRows AS
         , 'Sum'
         , 'Actual'
         , UpdatedDatetime
+
     FROM MonthlyCalculations
+
     UNION ALL
+
     SELECT
           NULL
         , FiscalYear
@@ -268,8 +293,10 @@ CalculatedRows AS
         , 'Percent'
         , 'Actual'
         , UpdatedDatetime
+
     FROM MonthlyCalculations
 )
+
 SELECT
       BlueBooksID
     , FiscalYear
@@ -292,8 +319,11 @@ SELECT
     , FiscalPeriodValueType
     , ReportSectionType
     , UpdatedDatetime
+
 FROM BlueBooksBase
+
 UNION ALL
+
 SELECT
       BlueBooksID
     , FiscalYear
@@ -316,5 +346,6 @@ SELECT
     , FiscalPeriodValueType
     , ReportSectionType
     , UpdatedDatetime
+
 FROM CalculatedRows;
 GO

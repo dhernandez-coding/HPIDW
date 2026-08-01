@@ -585,7 +585,17 @@ UPDATE dim.Practices SET PracticeIsActive = 0, PracticeUpdatedDatetime = GETDATE
 /*Updated 7/1/2026 - Set Unsell to Inactive*/
 UPDATE dim.Practices SET PracticeIsActive = 0, PracticeUpdatedDatetime = GETDATE() where PracticeID = '0~RSU'
 
+/*Updated 7/31/2026 - Set BEB to Inactive*/
+UPDATE dim.Practices SET PracticeIsActive = 0, PracticeUpdatedDatetime = GETDATE() where PracticeID = '0~BEB'
 
-select * from dim.Practices p where p.practicename like '%kell%'
+/*Added 7/31/2026 - Shane Hume, Erin Balzer, Michael Harvey*/
+INSERT INTO dim.Practices SELECT '0~CSH2',0,'CSH','Christopher S. Hume, D.O.','CSH','EPIC','TPG',1,0,GETDATE(),4,'OSSO Spine and Pain Management',81,'Spine','8/1/2026'
+INSERT INTO dim.Practices SELECT '0~ELB',0,'ELB','Erin L. Balzer, D.O.','ELB','EPIC','TPG',1,0,GETDATE(),36,NULL,80,'Family Med','8/1/2026'
+INSERT INTO dim.Practices SELECT '0~MRH',0,'MRH','Michael R. Harvey, M.D.','MRH','EPIC','TPG',1,0,GETDATE(),36,NULL,79,'Family Med','8/1/2026'
+
+
+
+select * from dim.Practices p where p.practiceid LIKE '0~CSH%'
+select * from dim.Practices p where p.PracticeGLLocationID = '36'
 */
 GO

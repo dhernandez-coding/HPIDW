@@ -162,13 +162,23 @@ insert into map.PracticeDepartments select '0~CDH','5~45200100102','1/1/2021','1
 4/30/2026 - Added new departments for Paul Maitino HPIP
 insert into map.PracticeDepartments select '0~PDM','5~43001100101','1/1/2021','12/31/2099',1,getdate(),NULL
 
+7/31/2026 - Added new departments for Christopher S. Hume
+insert into map.PracticeDepartments select '0~CSH2','5~42501050001','1/1/2021','12/31/2099',1,getdate(),NULL
+
+7/31/2026 - Added new departments for Erin L.Balzer
+insert into map.PracticeDepartments select '0~ELB','5~42501049001','1/1/2021','12/31/2099',1,getdate(),NULL
+
+7/31/2026 - Added new departments for Michael R. Harvey
+insert into map.PracticeDepartments select '0~MRH','5~42501048001','1/1/2021','12/31/2099',1,getdate(),NULL
 
 
+
+--select * from dim.departments d where d.DepartmentName like '%harvey%'
 
 select * from dim.vPractices p where p.practicename like '%maitino%'
-SELECT * FROM map.vPracticeDepartments where practiceid = '0~PDM'
-SELECT * FROM map.vPracticeDepartments where practiceid = '0~nps'
-SELECT * FROM map.vPracticeDepartments where practiceid = '0~rfh'
+SELECT * FROM map.vPracticeDepartments where practiceid = '0~CSH2'
+SELECT * FROM map.vPracticeDepartments where practiceid = '0~ELB'
+SELECT * FROM map.vPracticeDepartments where practiceid = '0~MRH'
 
 SELECT * FROM map.vPracticeProviders where practiceid = '0~PDM'
 SELECT * FROM map.vPracticeProviders where practiceid = '0~rfh'
@@ -189,7 +199,7 @@ select * from hpiapp.dbo.Practices p where p.practicename like '%Harris%'
 */
 
 --select * from map.vPracticeDepartments pd where pd.practiceid = '0~CDH' --pd.DepartmentID in ('5~42501023001')
---select * from dim.departments d where d.DepartmentID LIKE '5~452%'
+--select * from dim.departments d where d.DepartmentName like '%HUME%'
 
 --select * from HPIApp.dbo.Practices p where p.PracticeName like '%Nevinson%'
 GO
