@@ -39,7 +39,7 @@ select
 	--,CASE WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '41' THEN '02_X-ray Expense' --4.16.26 - Chris - maybe switch this to 02_Ancillary Service Expenses for Board Packet?
 		--  WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '51' THEN '02_Lab Expense' --4.16.26 - Chris - maybe switch this to 02_Ancillary Service Expenses for Board Packet?
 		--  ELSE CONCAT(RIGHT(CONCAT('00',rg.GLAccountReportGroupLevel3Sort),2),'_',rg.GLAccountReportGroupLevel3) END as GLAccountReportGroupLevel3
-	,concat('0~',s4.DSCRIPTN) as PracticeID
+	,CASE WHEN s4.DSCRIPTN = 'CSH' THEN '0~CSH2' ELSE concat('0~',s4.DSCRIPTN) END as PracticeID
 	,CASE WHEN a.TPCLBLNC = 0 THEN 'Debit' ELSE 'Credit' END as GLAccountBalanceType
 	,CASE WHEN a.ACCTTYPE = 1 THEN 'Posting Account'
 		  WHEN a.ACCTTYPE = 2 THEN 'Unit Account'

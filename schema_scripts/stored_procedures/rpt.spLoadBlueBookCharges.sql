@@ -129,7 +129,11 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 												/*This is here to handle duplicates with Joseph Broome at multiple practices*/
 												OR (pl.ParentProviderID in ('0~1306817887') 
 													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~JCB') ) )
-												
+
+												/*8.3.26 - Chris Cross - This is here to handle duplicates with Christopher S. Hume at multiple practices*/
+													OR (pl.ParentProviderID in ('0~1578665063') 
+														AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~CSH2') ) )
+																						
 
 												---THP BLOCK---
 												/*Added to handle duplicates for Audra S. Ball at multiple practices*/
@@ -139,29 +143,29 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 
 												
 												/*Added to handle duplicates for Holly A. Goracke at multiple practices*/
-									OR (pl.ParentProviderID in ('0~1659695450') 
-										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~HAG')
-																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~HAG'))) )
-									/*Added to handle duplicates for Russell D. Ingram at multiple practices*/
-									OR (pl.ParentProviderID in ('0~1043475353') 
-										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~RDI')
-																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~RDI'))) )
-									/*Added to handle duplicates for Anton Dreier at multiple practices*/
-									OR (pl.ParentProviderID in ('0~1780112706') 
-										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~ANT')
-																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~AD'))) )
-									/*Added to handle duplicates for Stuart H. Lisle at multiple practices*/
-									OR (pl.ParentProviderID in ('0~1447541750') 
-										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~SJL')
-																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~SJL'))) )
-									/*Added to handle duplicates for Dustin R. Baker at multiple practices*/
-									OR (pl.ParentProviderID in ('0~1154360436') 
-										AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~DRB')
-																										  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~DRB'))) )
+												OR (pl.ParentProviderID in ('0~1659695450') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~HAG')
+																													  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~HAG'))) )
+												/*Added to handle duplicates for Russell D. Ingram at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1043475353') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~RDI')
+																													  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~RDI'))) )
+												/*Added to handle duplicates for Anton Dreier at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1780112706') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~ANT')
+																													  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~AD'))) )
+												/*Added to handle duplicates for Stuart H. Lisle at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1447541750') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~SJL')
+																													  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~SJL'))) )
+												/*Added to handle duplicates for Dustin R. Baker at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1154360436') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND (t.TransactionDatasourceID IN (1,5) AND pp.PracticeID = '0~DRB')
+																													  OR (t.TransactionDatasourceID IN (17,18) AND pp.PracticeID = '0~THP~DRB'))) )
 								 --- THP BLOCK
 
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/ -- Added  '0~1841337631' '0~1659695450','0~1043475353','0~1780112706','0~1447541750','0~1154360436'
-												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887','0~1841337631','0~1659695450','0~1043475353','0~1780112706','0~1447541750','0~1154360436'))
+												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887','0~1841337631','0~1659695450','0~1043475353','0~1780112706','0~1447541750','0~1154360436','0~1578665063'))
 												
 			left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 			left join dim.Payers py ON py.PayerID = t.TransactionPayerID

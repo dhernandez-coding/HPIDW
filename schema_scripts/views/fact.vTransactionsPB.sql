@@ -168,7 +168,7 @@ FROM (
 		,RIGHT('000' + CONVERT(NVARCHAR, pt.PracticeGLPracticeID),3) as TransactionGLPracticeID
 		,pp.PracticeProviderGLProviderID as TransactionGLProviderID
 		,'4010' as TransactionGLSegmentDescription
-		,--CASE WHEN t.TransactionType = 'Payment' THEN
+		,CONVERT(varchar(2),
 			CASE WHEN pt.PracticeIsActive = 0 THEN '99' /*Set to 99-inactive for inactive practices - Chris Cross added on 4/1/25*/
 				 WHEN COALESCE(t.TransactionGLType,tc.TransactionGLType) = 'RadTC' THEN '41' /*Rad TC*/
 				 WHEN COALESCE(t.TransactionDepartmentID,tc.TransactionDepartmentID) in ('1~10','1~25') THEN '61' /*PI*/ 
@@ -188,7 +188,7 @@ FROM (
 				 WHEN COALESCE(t.TransactionGLType,tc.TransactionGLType) is null and pp.PracticeProviderGLTypeID is not null THEN pp.PracticeProviderGLTypeID /*PA, ARNP, etc*/
 				 WHEN COALESCE(t.TransactionGLType,tc.TransactionGLType) is null and COALESCE(t.TransactionBillingProviderID,tc.TransactionBillingProviderID) IS NULL and pt.PracticeIsActive = 1 THEN '01' /*Direct - Chris Cross added on 4/1/25*/
 				 ELSE '99' /*Admin for non-mapped or no longer effective practice providers*/
-			END 
+			END)
 		 --END 
 			 as TransactionGLSegmentType
 	  ,CASE WHEN t.TransactionType = 'Adjustment' THEN
@@ -290,8 +290,12 @@ FROM (
 												OR (pl.ParentProviderID in ('0~1306817887') 
 													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~JCB') ) )
 												
-												/*All other providers without specific mapping issues due to multiple practices as defined above*/
-												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887'))
+												/*8.3.26 - Chris Cross - This is here to handle duplicates with Christopher S. Hume at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1578665063') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~CSH2') ) )
+												
+											/*All other providers without specific mapping issues due to multiple practices as defined above*/
+											OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887','0~1578665063'))	
 													
 		left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 		left join rpt.PBPaymentLag ppl ON ppl.PracticeID = pt.PracticeID

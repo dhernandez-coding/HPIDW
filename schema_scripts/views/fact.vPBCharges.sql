@@ -219,9 +219,12 @@ FROM (
 												OR (pl.ParentProviderID in ('0~1306817887') 
 													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~JCB') ) )
 												
-												/*All other providers without specific mapping issues due to multiple practices as defined above*/
-												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887')
-												)
+												/*8.3.26 - Chris Cross - This is here to handle duplicates with Christopher S. Hume at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1578665063') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~CSH2') ) )
+												
+											/*All other providers without specific mapping issues due to multiple practices as defined above*/
+											OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887','0~1578665063'))	
 												
 		/*Replaced on 11.6.2024 due to duplicates caused by TMG Imaging and TMG Billing Office departments
 		left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID

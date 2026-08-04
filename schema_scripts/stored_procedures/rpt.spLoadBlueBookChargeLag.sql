@@ -91,8 +91,12 @@ IF OBJECT_ID('tempdb..#TempChargeLag') IS NOT NULL DROP TABLE #TempChargeLag
 												OR (pl.ParentProviderID in ('0~1306817887') 
 													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~JCB') ) )
 												
+												/*8.3.26 - Chris Cross - This is here to handle duplicates with Christopher S. Hume at multiple practices*/
+												OR (pl.ParentProviderID in ('0~1578665063') 
+													AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND pp.PracticeID = '0~CSH') ) )
+												
 												/*All other providers without specific mapping issues due to multiple practices as defined above*/
-												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887'))
+												OR pl.ParentProviderID not in ('0~1588209423','0~1679132823','0~1992746200','0~1891761136','0~1376509828','0~1245788231','0~1376507665','0~1063484251','0~1306817887','0~1578665063'))	
 												
 		left join dim.vPractices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 		left join dim.Payers py ON py.PayerID = t.TransactionPayerID
