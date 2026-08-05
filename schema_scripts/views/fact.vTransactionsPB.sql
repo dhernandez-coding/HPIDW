@@ -168,7 +168,7 @@ FROM (
 		,RIGHT('000' + CONVERT(NVARCHAR, pt.PracticeGLPracticeID),3) as TransactionGLPracticeID
 		,pp.PracticeProviderGLProviderID as TransactionGLProviderID
 		,'4010' as TransactionGLSegmentDescription
-		,CONVERT(varchar(2),
+		,RIGHT(CONCAT('00',
 			CASE WHEN pt.PracticeIsActive = 0 THEN '99' /*Set to 99-inactive for inactive practices - Chris Cross added on 4/1/25*/
 				 WHEN COALESCE(t.TransactionGLType,tc.TransactionGLType) = 'RadTC' THEN '41' /*Rad TC*/
 				 WHEN COALESCE(t.TransactionDepartmentID,tc.TransactionDepartmentID) in ('1~10','1~25') THEN '61' /*PI*/ 
@@ -188,7 +188,7 @@ FROM (
 				 WHEN COALESCE(t.TransactionGLType,tc.TransactionGLType) is null and pp.PracticeProviderGLTypeID is not null THEN pp.PracticeProviderGLTypeID /*PA, ARNP, etc*/
 				 WHEN COALESCE(t.TransactionGLType,tc.TransactionGLType) is null and COALESCE(t.TransactionBillingProviderID,tc.TransactionBillingProviderID) IS NULL and pt.PracticeIsActive = 1 THEN '01' /*Direct - Chris Cross added on 4/1/25*/
 				 ELSE '99' /*Admin for non-mapped or no longer effective practice providers*/
-			END)
+			END),2)
 		 --END 
 			 as TransactionGLSegmentType
 	  ,CASE WHEN t.TransactionType = 'Adjustment' THEN
