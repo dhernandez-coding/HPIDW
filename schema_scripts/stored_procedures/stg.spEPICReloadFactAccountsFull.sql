@@ -5,10 +5,11 @@
 -- Change control: 
 -- 1. 05/09/2025 - Diego Hernandez - Adding safe load
 -- 2. 10/29/2025 - Diego Hernandez - Change temptable and openquery 
+-- 3. 08/11/2026 - Chris Cross - Added conditional logic to AccountBillingStatus for Bad Debt
 -- =============================================
 CREATE PROCEDURE [stg].[spEPICReloadFactAccountsFull] AS
 BEGIN
-    SET NOCOUNT ON;
+    --SET NOCOUNT ON;
 
     PRINT 'Creating #StagingTable...';
 
@@ -103,7 +104,7 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
         bc.NAME AS AccountClass,
         ac.NAME AS AccountType,
         svc.NAME AS AccountService,
-        bs.NAME AS AccountBillingStatus,
+        CASE WHEN a3. BAD_DEBT_FLAG_YN = ''Y'' THEN ''Bad Debt'' ELSE bs.NAME END AS AccountBillingStatus,
         cs.NAME AS AccountCodingStatus,
         a.CODING_DATETIME AS AccountCodingStatusDatetime,
         drg.DRG_NUMBER AS AccountDRG,

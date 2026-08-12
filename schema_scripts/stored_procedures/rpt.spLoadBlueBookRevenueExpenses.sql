@@ -44,12 +44,14 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 			,count(pp1.ProviderID) as ProviderCount
 			,sum(pp1.PracticeProviderAllocationPercent) as AllocationPercentTotal
 		from dim.Dates d 
-			left join map.vPracticeProviders pp1 ON pp1.PracticeProviderEffectiveDate <= d.Date
+			left join map.PracticeProviders pp1 ON pp1.PracticeProviderEffectiveDate <= d.Date
 												  AND pp1.PracticeProviderEndDate >= d.Date
 												  AND ISNULL(pp1.PracticeProviderAllocationPercent,0) > 0
+			left join dim.Practices p ON p.PracticeID = pp1.PracticeID
 		where 1=1
 			and d.Date = d.FirstDayOfMonth
 			and d.Date >= '1/1/2021' and d.Date <= GETDATE()
+			and p.PracticeCompany in ('TPG')
 			--and pp1.PracticeID = '0~RSG'
 		group by 
 			d.Date
