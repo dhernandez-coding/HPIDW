@@ -316,13 +316,16 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
 		AND t.DETAIL_TYPE < 40
 		AND (t.SERV_AREA_ID IN (425,430)
 			 OR (t.SERV_AREA_ID IN (452000) AND t.ORIG_SERVICE_DATE >= ''3/23/2026''))
+		AND (t.DEPT_ID NOT IN (42501049001,42501048001) OR (t.DEPT_ID IN (42501049001,42501048001) AND t.ORIG_SERVICE_DATE >= ''7/29/2026'')) --Added on 8/15/26 to remove errant charges posted before these practices started
 		AND t.POST_DATE >= ''1/1/2019''
 		AND t.POST_DATE >= DATEADD(DAY,-5, convert(date,GETDATE()))
+
+
 		--AND t.POST_DATE BETWEEN ''12/1/2025'' and ''12/31/2025''
 		--AND t.DEPT_ID in (42501010001,42501010002) --''42501001001''			
 	') tx
 	LEFT JOIN #TEMP_ProcedureCodeMapping pc ON pc.ProcedureCode = COALESCE(tx.TransactionCPTCode,tx.TransactionCode)
-WHERE 1=1
+WHERE 1=1  
 
 
 /*Check #Staging records and delete/reload into fact.TransactionsPB*/

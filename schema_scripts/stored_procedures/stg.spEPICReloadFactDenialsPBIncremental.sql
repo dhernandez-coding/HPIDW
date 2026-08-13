@@ -1,4 +1,5 @@
-CREATE PROCEDURE [stg].[spEPICReloadFactDenialsPBFull]	AS
+CREATE PROCEDURE [stg].[spEPICReloadFactDenialsPBIncremental]	AS
+
 BEGIN		
 	-- ========================================================================
 	-- Author:		Eric Silvestri
@@ -6,13 +7,19 @@ BEGIN
 	-- Description:	Loads PB denial records from EPIC into fact.PBDenials.
     -- Change Control: Diego Hernandez - Modify the script to OpenQUERY (3/6/2026)
     --                 Diego Hernandez - Remove the group by (8/12/2026)
+					 --Eric Silvestri - Added Incremental reload 8/12/2026
 
 	-- ========================================================================
 
+DECLARE @DaysToReload int = 30
+
+/*Delete and reload VisitItems from last 10 days*/
+PRINT 'Deleting HB records posted in the last' + convert(varchar(10),@DaysToReload) + ' days....'
+DELETE FROM  fact.DenialsPB WHERE DenialDataSourceID = 5 AND DenialPostingDate >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 10 days*/
 	
--- Step 1: Delete existing records for the data source
-	DELETE FROM fact.DenialsPB 
-	WHERE DenialDataSourceID = 5;
+---- Step 1: Delete existing records for the data source
+--	DELETE FROM fact.DenialsPB 
+--	WHERE DenialDataSourceID = 5;
 
 -- Step 2: Insert into fact.DenialsPB
 INSERT INTO fact.DenialsPB
@@ -96,6 +103,7 @@ INSERT INTO fact.DenialsPB
 (
         [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
         '
+		DECLARE @DaysToReload int = 30
         SELECT
             d.BDC_ID,
             d.PAYMENT_TRANSACTION_ID,
@@ -133,6 +141,7 @@ INSERT INTO fact.DenialsPB
         FROM Clarity.ORGFILTER.V_CUBE_F_PB_DENIALS d
         LEFT JOIN Clarity.ORGFILTER.X_CUBE_D_REASON_CODE dr
             ON d.REASON_CODE_ID = dr.REASON_CODE_ID
+		WHERE d.DENIAL_POST_DATE >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 30 days*/
 
         '
     ) src;

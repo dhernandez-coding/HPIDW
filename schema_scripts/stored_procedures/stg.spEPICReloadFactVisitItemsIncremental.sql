@@ -7,11 +7,21 @@
 -- 1. 08/12/2026 - Diego Hernandez -  Move to OpenQuery
 -- =============================================
 /****** Script for SelectTopNRows command from SSMS  ******/
-CREATE PROCEDURE [stg].[spEPICReloadFactVisitItemsFull] AS
-BEGIN
-    SET NOCOUNT ON;
+CREATE PROCEDURE [stg].[spEPICReloadFactVisitItemsIncremental] AS
 
-    DELETE FROM fact.VisitItems WHERE VisitItemDataSourceID = 5;
+BEGIN
+
+SET NOCOUNT ON;
+
+DECLARE @DaysToReload int = 10
+
+/*Delete and reload VisitItems from last 10 days*/
+PRINT 'Deleting HB records posted in the last' + convert(varchar(10),@DaysToReload) + ' days....'
+DELETE FROM fact.VisitItems WHERE VisitItemDataSourceID = 5 AND VisitItemUsedDate >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 10 days*/
+
+    
+
+    --DELETE FROM fact.VisitItems WHERE VisitItemDataSourceID = 5;
 
     /* 1. Supplies, Implants, and Medications */
     INSERT INTO fact.VisitItems
@@ -66,7 +76,8 @@ BEGIN
         ,1 as VisitItemIsActive
         ,GETDATE()
     FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
-        SELECT
+       DECLARE @DaysToReload int = 10 
+		SELECT
             hsp.HSP_ACCOUNT_ID,
             orl.OR_LINK_CSN,
             orl.OR_CASELOG_ID,
@@ -91,6 +102,7 @@ BEGIN
         LEFT JOIN CLARITY.ORGFILTER.clarity_dep cd on enc.effective_dept_id = cd.department_id
         LEFT JOIN CLARITY.ORGFILTER.clarity_loc cl on cd.rev_loc_id = cl.loc_id
         WHERE cl.serv_area_id in (''425'', ''430'')
+			AND enc.EFFECTIVE_DATE_DTTM >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 10 days*/
     ') r;
 
     /* 2. Medications */
@@ -135,7 +147,8 @@ BEGIN
         ,1 as VisitItemIsActive
         ,GETDATE()
     FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
-        SELECT
+        DECLARE @DaysToReload int = 10
+		SELECT
             tx.HSP_ACCOUNT_ID,
             hsp.PRIM_ENC_CSN_ID,
             ord.MEDICATION_ID,
@@ -155,7 +168,10 @@ BEGIN
           AND tx.SERV_AREA_ID in (425,430)
           AND tx.DFLT_UB_REV_CD_ID in (250,251,252,254,255,256,257,258,259,630,631,632,633,634,635,636)
           AND hsp.PRIM_ENC_CSN_ID is not null
+		  AND tx.SERVICE_DATE >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 10 days*/
+
     ') r;
+
 END;
 
 --OLD QUERY

@@ -6,195 +6,198 @@ CREATE PROCEDURE [stg].[spEPICReloadFactVisitAvailabilityPBIncremental]	AS
 	-- Description:	Loads PB VisitAvailability records from EPIC into fact.VisitAvailabilityPB.
     -- Charge Control: 	
         --1. 3/6/26 - Diego Hernandez - Added datasource 15 to the where clause to include Modmed 
+		--2. 8/12/2026 - Eric Silvestri - Moved the reload days inside the openquery 
 	-- ========================================================================
 
 BEGIN
  
-/*Step 1: Load Staging Table with PB VisitAvailabilityPB...*/
-PRINT 'Step 1: Create Staging Table...'
-
-DECLARE @DaysToReload INT = 5
-
-PRINT 'Setting Days To Reload: ' + CONVERT(VARCHAR(10), @DaysToReload) + '...'
-
-
-DECLARE @Staging TABLE
-(
-    [VisitAvailabilityID] VARCHAR(100) NOT NULL,
-    [VisitAvailabilityVisitID] VARCHAR(50),
-    [VisitAvailabilityDataSourceID] INT,
-    [VisitAvailabilityDate] DATETIME,
-    [VisitAvailabilityPatientID] VARCHAR(50),
-    [VisitAvailabilityDepartmentID] VARCHAR(50),
-    [VisitAvailabilitySpecialty] VARCHAR(50),
-    [VisitAvailabilityLocationID] VARCHAR(50),
-    [VisitAvailabilityProviderID] VARCHAR(50),
-    [VisitAvailabilityAppointmentFlag] INT,
-    [VisitAvailabilityType] VARCHAR(50),
-    [VisitAvailabilityUnavailable] VARCHAR(10),
-    [VisitAvailabilityUnavailableReason] VARCHAR(50),
-    [VisitAvailabilityOutsideTemplate] VARCHAR(10),
-    [VisitAvailabilityOverbook] VARCHAR(10),
-    [VisitAvailabilityRegularOpening] INT,
-    [VisitAvailabilityOverbookOpening] INT,
-    [VisitAvailabilitySlotLength] INT,
-    [VisitAvailabilityBeginTime] DATETIME,
-    [VisitAvailabilityEndTime] DATETIME,
-    [VisitAvailabilityUpdateDate] DATETIME
-)
-
-
-/* Step 1.1: Load staging table */
-PRINT 'Step 1.1: Loading fact.VisitAvailabilityPB into @Staging...'
-
-INSERT INTO @Staging
-(
-    VisitAvailabilityID,
-    VisitAvailabilityVisitID,
-    VisitAvailabilityDataSourceID,
-    VisitAvailabilityDate,
-    VisitAvailabilityPatientID,
-    VisitAvailabilityDepartmentID,
-    VisitAvailabilitySpecialty,
-    VisitAvailabilityLocationID,
-    VisitAvailabilityProviderID,
-    VisitAvailabilityAppointmentFlag,
-    VisitAvailabilityType,
-    VisitAvailabilityUnavailable,
-    VisitAvailabilityUnavailableReason,
-    VisitAvailabilityOutsideTemplate,
-    VisitAvailabilityOverbook,
-    VisitAvailabilityRegularOpening,
-    VisitAvailabilityOverbookOpening,
-    VisitAvailabilitySlotLength,
-    VisitAvailabilityBeginTime,
-    VisitAvailabilityEndTime,
-    VisitAvailabilityUpdateDate
-)
-
-SELECT
-    CONCAT('5~',src.PAT_ENC_CSN_ID,'~',src.PROV_ID,'~',src.DEPARTMENT_ID,'~',FORMAT(src.SLOT_BEGIN_TIME,'yyyy-MM-dd HH:mm:ss')),
-    CONCAT('5~',src.PAT_ENC_CSN_ID),
-    5,
-    src.SLOT_DATE,
-    CONCAT('5~',src.PAT_ID),
-    CONCAT('5~',src.DEPARTMENT_ID),
-    src.DEPT_SPECIALTY_NAME,
-    CONCAT('5~',src.LOC_ID),
-    CONCAT('5~',src.PROV_ID),
-    src.NUM_APTS_SCHEDULED,
-    src.APPT_PRC_NAME,
-    src.TIME_UNAVAIL_YN,
-    src.TIME_UNAVAIL_RSN_NAME,
-    src.OUTSIDE_TEMPLATE_YN,
-    src.APPT_OVERBOOK_YN,
-    src.ORG_REG_OPENINGS,
-    src.ORG_OVBK_OPENINGS,
-    src.SLOT_LENGTH,
-    src.SLOT_BEGIN_TIME,
-    src.SLOT_END_TIME,
-    GETDATE()
-
-FROM OPENQUERY
-(
-    [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
-'
-SELECT
-    a.PAT_ENC_CSN_ID,
-    a.PROV_ID,
-    a.DEPARTMENT_ID,
-    a.SLOT_BEGIN_TIME,
-    a.SLOT_DATE,
-    a.PAT_ID,
-    a.DEPT_SPECIALTY_NAME,
-    a.LOC_ID,
-    a.NUM_APTS_SCHEDULED,
-    a.APPT_PRC_NAME,
-    a.TIME_UNAVAIL_YN,
-    a.TIME_UNAVAIL_RSN_NAME,
-    a.OUTSIDE_TEMPLATE_YN,
-    a.APPT_OVERBOOK_YN,
-    a.ORG_REG_OPENINGS,
-    a.ORG_OVBK_OPENINGS,
-    a.SLOT_LENGTH,
-    a.SLOT_END_TIME
-FROM CLARITY.ORGFILTER.V_AVAILABILITY a
-WHERE
-    (a.PAT_ENC_CSN_ID IS NOT NULL OR (a.PAT_ENC_CSN_ID IS NULL AND a.NUM_APTS_SCHEDULED = 0))
-    AND (a.DEPARTMENT_NAME LIKE ''TPG%'' OR a.DEPARTMENT_NAME LIKE ''HPIP%'')
-'
-) src
-WHERE src.SLOT_DATE >= DATEADD(DAY,-@DaysToReload,CONVERT(DATE,GETDATE()))
-
-GROUP BY
-    src.PAT_ENC_CSN_ID,
-    src.PROV_ID,
-    src.DEPARTMENT_ID,
-    src.SLOT_BEGIN_TIME,
-    src.SLOT_DATE,
-    src.PAT_ID,
-    src.DEPT_SPECIALTY_NAME,
-    src.LOC_ID,
-    src.NUM_APTS_SCHEDULED,
-    src.APPT_PRC_NAME,
-    src.TIME_UNAVAIL_YN,
-    src.TIME_UNAVAIL_RSN_NAME,
-    src.OUTSIDE_TEMPLATE_YN,
-    src.APPT_OVERBOOK_YN,
-    src.ORG_REG_OPENINGS,
-    src.ORG_OVBK_OPENINGS,
-    src.SLOT_LENGTH,
-    src.SLOT_END_TIME
-
-
-/* Step 2: Validate staging count before load */
-
-PRINT 'Step 2: Checking number of records in @Staging...'
-
-IF (SELECT COUNT(1) FROM @Staging) > 100
-BEGIN
-
-    PRINT 'Step 2.1: More than 100 records exist in @Staging. Proceeding with DELETE...'
-
-    DELETE FROM fact.VisitAvailabilityPB
-    WHERE VisitAvailabilityDataSourceID = 5
-    AND VisitAvailabilityDate >= DATEADD(DAY,-@DaysToReload,CONVERT(DATE,GETDATE()))
-
-
-    PRINT 'Step 2.2: Proceeding with INSERT...'
-
-    INSERT INTO fact.VisitAvailabilityPB
-    (
-        VisitAvailabilityID,
-        VisitAvailabilityVisitID,
-        VisitAvailabilityDataSourceID,
-        VisitAvailabilityDate,
-        VisitAvailabilityPatientID,
-        VisitAvailabilityDepartmentID,
-        VisitAvailabilitySpecialty,
-        VisitAvailabilityLocationID,
-        VisitAvailabilityProviderID,
-        VisitAvailabilityAppointmentFlag,
-        VisitAvailabilityType,
-        VisitAvailabilityUnavailable,
-        VisitAvailabilityUnavailableReason,
-        VisitAvailabilityOutsideTemplate,
-        VisitAvailabilityOverbook,
-        VisitAvailabilityRegularOpening,
-        VisitAvailabilityOverbookOpening,
-        VisitAvailabilitySlotLength,
-        VisitAvailabilityBeginTime,
-        VisitAvailabilityEndTime,
-        VisitAvailabilityUpdateDate
-    )
-
-    SELECT *
-    FROM @Staging
-
-END
-ELSE
-    PRINT 'Less than 100 records in @Staging. Ending Job...'
-
+/*Step 1: Load Staging Table with PB VisitAvailabilityPB...*/
+PRINT 'Step 1: Create Staging Table...'
+
+DECLARE @DaysToReload INT = 5
+
+PRINT 'Setting Days To Reload: ' + CONVERT(VARCHAR(10), @DaysToReload) + '...'
+
+
+DECLARE @Staging TABLE
+(
+    [VisitAvailabilityID] VARCHAR(100) NOT NULL,
+    [VisitAvailabilityVisitID] VARCHAR(50),
+    [VisitAvailabilityDataSourceID] INT,
+    [VisitAvailabilityDate] DATETIME,
+    [VisitAvailabilityPatientID] VARCHAR(50),
+    [VisitAvailabilityDepartmentID] VARCHAR(50),
+    [VisitAvailabilitySpecialty] VARCHAR(50),
+    [VisitAvailabilityLocationID] VARCHAR(50),
+    [VisitAvailabilityProviderID] VARCHAR(50),
+    [VisitAvailabilityAppointmentFlag] INT,
+    [VisitAvailabilityType] VARCHAR(50),
+    [VisitAvailabilityUnavailable] VARCHAR(10),
+    [VisitAvailabilityUnavailableReason] VARCHAR(50),
+    [VisitAvailabilityOutsideTemplate] VARCHAR(10),
+    [VisitAvailabilityOverbook] VARCHAR(10),
+    [VisitAvailabilityRegularOpening] INT,
+    [VisitAvailabilityOverbookOpening] INT,
+    [VisitAvailabilitySlotLength] INT,
+    [VisitAvailabilityBeginTime] DATETIME,
+    [VisitAvailabilityEndTime] DATETIME,
+    [VisitAvailabilityUpdateDate] DATETIME
+)
+
+
+/* Step 1.1: Load staging table */
+PRINT 'Step 1.1: Loading fact.VisitAvailabilityPB into @Staging...'
+
+INSERT INTO @Staging
+(
+    VisitAvailabilityID,
+    VisitAvailabilityVisitID,
+    VisitAvailabilityDataSourceID,
+    VisitAvailabilityDate,
+    VisitAvailabilityPatientID,
+    VisitAvailabilityDepartmentID,
+    VisitAvailabilitySpecialty,
+    VisitAvailabilityLocationID,
+    VisitAvailabilityProviderID,
+    VisitAvailabilityAppointmentFlag,
+    VisitAvailabilityType,
+    VisitAvailabilityUnavailable,
+    VisitAvailabilityUnavailableReason,
+    VisitAvailabilityOutsideTemplate,
+    VisitAvailabilityOverbook,
+    VisitAvailabilityRegularOpening,
+    VisitAvailabilityOverbookOpening,
+    VisitAvailabilitySlotLength,
+    VisitAvailabilityBeginTime,
+    VisitAvailabilityEndTime,
+    VisitAvailabilityUpdateDate
+)
+
+SELECT
+    CONCAT('5~',src.PAT_ENC_CSN_ID,'~',src.PROV_ID,'~',src.DEPARTMENT_ID,'~',FORMAT(src.SLOT_BEGIN_TIME,'yyyy-MM-dd HH:mm:ss')),
+    CONCAT('5~',src.PAT_ENC_CSN_ID),
+    5,
+    src.SLOT_DATE,
+    CONCAT('5~',src.PAT_ID),
+    CONCAT('5~',src.DEPARTMENT_ID),
+    src.DEPT_SPECIALTY_NAME,
+    CONCAT('5~',src.LOC_ID),
+    CONCAT('5~',src.PROV_ID),
+    src.NUM_APTS_SCHEDULED,
+    src.APPT_PRC_NAME,
+    src.TIME_UNAVAIL_YN,
+    src.TIME_UNAVAIL_RSN_NAME,
+    src.OUTSIDE_TEMPLATE_YN,
+    src.APPT_OVERBOOK_YN,
+    src.ORG_REG_OPENINGS,
+    src.ORG_OVBK_OPENINGS,
+    src.SLOT_LENGTH,
+    src.SLOT_BEGIN_TIME,
+    src.SLOT_END_TIME,
+    GETDATE()
+
+FROM OPENQUERY
+(
+    [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
+'
+DECLARE @DaysToReload INT = 5
+SELECT
+    a.PAT_ENC_CSN_ID,
+    a.PROV_ID,
+    a.DEPARTMENT_ID,
+    a.SLOT_BEGIN_TIME,
+    a.SLOT_DATE,
+    a.PAT_ID,
+    a.DEPT_SPECIALTY_NAME,
+    a.LOC_ID,
+    a.NUM_APTS_SCHEDULED,
+    a.APPT_PRC_NAME,
+    a.TIME_UNAVAIL_YN,
+    a.TIME_UNAVAIL_RSN_NAME,
+    a.OUTSIDE_TEMPLATE_YN,
+    a.APPT_OVERBOOK_YN,
+    a.ORG_REG_OPENINGS,
+    a.ORG_OVBK_OPENINGS,
+    a.SLOT_LENGTH,
+    a.SLOT_END_TIME
+FROM CLARITY.ORGFILTER.V_AVAILABILITY a
+WHERE
+    (a.PAT_ENC_CSN_ID IS NOT NULL OR (a.PAT_ENC_CSN_ID IS NULL AND a.NUM_APTS_SCHEDULED = 0))
+    AND (a.DEPARTMENT_NAME LIKE ''TPG%'' OR a.DEPARTMENT_NAME LIKE ''HPIP%'')
+	AND a.SLOT_DATE >= DATEADD(DAY,-@DaysToReload,CONVERT(DATE,GETDATE()))
+'
+) src
+--WHERE src.SLOT_DATE >= DATEADD(DAY,-@DaysToReload,CONVERT(DATE,GETDATE()))
+
+GROUP BY
+    src.PAT_ENC_CSN_ID,
+    src.PROV_ID,
+    src.DEPARTMENT_ID,
+    src.SLOT_BEGIN_TIME,
+    src.SLOT_DATE,
+    src.PAT_ID,
+    src.DEPT_SPECIALTY_NAME,
+    src.LOC_ID,
+    src.NUM_APTS_SCHEDULED,
+    src.APPT_PRC_NAME,
+    src.TIME_UNAVAIL_YN,
+    src.TIME_UNAVAIL_RSN_NAME,
+    src.OUTSIDE_TEMPLATE_YN,
+    src.APPT_OVERBOOK_YN,
+    src.ORG_REG_OPENINGS,
+    src.ORG_OVBK_OPENINGS,
+    src.SLOT_LENGTH,
+    src.SLOT_END_TIME
+
+
+/* Step 2: Validate staging count before load */
+
+PRINT 'Step 2: Checking number of records in @Staging...'
+
+IF (SELECT COUNT(1) FROM @Staging) > 100
+BEGIN
+
+    PRINT 'Step 2.1: More than 100 records exist in @Staging. Proceeding with DELETE...'
+
+    DELETE FROM fact.VisitAvailabilityPB
+    WHERE VisitAvailabilityDataSourceID = 5
+    AND VisitAvailabilityDate >= DATEADD(DAY,-@DaysToReload,CONVERT(DATE,GETDATE()))
+
+
+    PRINT 'Step 2.2: Proceeding with INSERT...'
+
+    INSERT INTO fact.VisitAvailabilityPB
+    (
+        VisitAvailabilityID,
+        VisitAvailabilityVisitID,
+        VisitAvailabilityDataSourceID,
+        VisitAvailabilityDate,
+        VisitAvailabilityPatientID,
+        VisitAvailabilityDepartmentID,
+        VisitAvailabilitySpecialty,
+        VisitAvailabilityLocationID,
+        VisitAvailabilityProviderID,
+        VisitAvailabilityAppointmentFlag,
+        VisitAvailabilityType,
+        VisitAvailabilityUnavailable,
+        VisitAvailabilityUnavailableReason,
+        VisitAvailabilityOutsideTemplate,
+        VisitAvailabilityOverbook,
+        VisitAvailabilityRegularOpening,
+        VisitAvailabilityOverbookOpening,
+        VisitAvailabilitySlotLength,
+        VisitAvailabilityBeginTime,
+        VisitAvailabilityEndTime,
+        VisitAvailabilityUpdateDate
+    )
+
+    SELECT *
+    FROM @Staging
+
+END
+ELSE
+    PRINT 'Less than 100 records in @Staging. Ending Job...'
+
 END
 
 
@@ -281,29 +284,29 @@ END
 --    a.SLOT_END_TIME as VisitAvailabilityEndTime,
 --    GETDATE() as VisitAvailabilityUpdateDate
 --FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].V_AVAILABILITY a
---WHERE  
---    (a.PAT_ENC_CSN_ID IS NOT NULL OR (a.PAT_ENC_CSN_ID IS NULL AND a.NUM_APTS_SCHEDULED = 0))
---    AND (a.DEPARTMENT_NAME LIKE 'TPG%' OR a.DEPARTMENT_NAME LIKE 'HPIP%')
---    AND a.SLOT_DATE >= DATEADD(DAY, -@DaysToReload, CONVERT(date, GETDATE()))
---GROUP BY 
---    a.PAT_ENC_CSN_ID,
---    a.PROV_ID,
---    a.DEPARTMENT_ID,
---    a.SLOT_BEGIN_TIME,
---    a.SLOT_DATE,
---    a.PAT_ID,
---    a.DEPT_SPECIALTY_NAME,
---    a.LOC_ID,
---    a.NUM_APTS_SCHEDULED,
---    a.APPT_PRC_NAME,
---    a.TIME_UNAVAIL_YN,
---    a.TIME_UNAVAIL_RSN_NAME,
---    a.OUTSIDE_TEMPLATE_YN,
---    a.APPT_OVERBOOK_YN,
---    a.ORG_REG_OPENINGS,
---    a.ORG_OVBK_OPENINGS,
---    a.SLOT_LENGTH,
---    a.SLOT_END_TIME
+--WHERE  
+--    (a.PAT_ENC_CSN_ID IS NOT NULL OR (a.PAT_ENC_CSN_ID IS NULL AND a.NUM_APTS_SCHEDULED = 0))
+--    AND (a.DEPARTMENT_NAME LIKE 'TPG%' OR a.DEPARTMENT_NAME LIKE 'HPIP%')
+--    AND a.SLOT_DATE >= DATEADD(DAY, -@DaysToReload, CONVERT(date, GETDATE()))
+--GROUP BY 
+--    a.PAT_ENC_CSN_ID,
+--    a.PROV_ID,
+--    a.DEPARTMENT_ID,
+--    a.SLOT_BEGIN_TIME,
+--    a.SLOT_DATE,
+--    a.PAT_ID,
+--    a.DEPT_SPECIALTY_NAME,
+--    a.LOC_ID,
+--    a.NUM_APTS_SCHEDULED,
+--    a.APPT_PRC_NAME,
+--    a.TIME_UNAVAIL_YN,
+--    a.TIME_UNAVAIL_RSN_NAME,
+--    a.OUTSIDE_TEMPLATE_YN,
+--    a.APPT_OVERBOOK_YN,
+--    a.ORG_REG_OPENINGS,
+--    a.ORG_OVBK_OPENINGS,
+--    a.SLOT_LENGTH,
+--    a.SLOT_END_TIME
 
 
 

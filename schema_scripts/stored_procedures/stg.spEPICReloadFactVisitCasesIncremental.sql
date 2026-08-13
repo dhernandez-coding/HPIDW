@@ -14,11 +14,15 @@
 -- 9. 03/26/2025 - Diego Hernandez -Include temp table
 -- 10.04/08/2025 - Diego Hernandez - Changing to @stagingtable to manage failures 
 -- 11. 08/12/2026 - Diego Hernandez - OpenQuery
+-- 12. 8/12/2026 - Eric Silvestri - added Incremental load
 -- =============================================
 
-CREATE PROCEDURE [stg].[spEPICReloadFactVisitCasesFull] AS
+CREATE PROCEDURE [stg].[spEPICReloadFactVisitCasesIncremental] AS
 BEGIN
     SET NOCOUNT ON;
+
+	
+	DECLARE @DaysToReload int = 30
 
     PRINT 'Creating @StagingTable...'
 
@@ -286,7 +290,8 @@ BEGIN
         ,r.EMERG_STATUS_YN as VisitCaseEmergencyStatus
         ,r.DELAY_REASON_NM AS VisitCaseDelayReason
     FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
-        SELECT
+        DECLARE @DaysToReload int = 30
+		SELECT
             orc.or_case_id,
             ol.or_link_csn,
             COALESCE(ol.OR_LINK_CSN, enc.PAT_ENC_CSN_ID, ol.PAT_ENC_CSN_ID) AS VisitCaseCSN,
@@ -385,13 +390,16 @@ BEGIN
         LEFT JOIN CLARITY.ORGFILTER.ZC_OR_ANESTH_TYPE anz ON anz.ANESTHESIA_TYPE_C = lb.PRIMARY_ANES_TYPE_C
         LEFT JOIN CLARITY.ORGFILTER.ZC_ADM_SOURCE zcadm ON peh.ADMIT_SOURCE_C = zcadm.ADMIT_SOURCE_C
         WHERE loc.serv_area_id IN (430, 425)
+			AND orc.surgery_date >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 30 days*/
     ') r
     LEFT JOIN #Laterality l ON l.VisitCaseID = r.or_case_id;
 
     IF (SELECT COUNT(1) FROM @StagingTable) >= 10
     BEGIN
-        PRINT 'At least 10 records found. Proceeding to delete and reload.'
-        DELETE FROM fact.VisitCases WHERE VisitCaseDatesourceID = 5;
+        --PRINT 'At least 10 records found. Proceeding to delete and reload.'
+        --DELETE FROM fact.VisitCases WHERE VisitCaseDatesourceID = 5;
+		PRINT 'Deleting records posted in the last' + convert(varchar(10),@DaysToReload) + ' days....'
+		DELETE FROM fact.VisitCases WHERE VisitCaseDatesourceID = 5 AND VisitCaseServiceDate >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 30 days*/
         
         INSERT INTO fact.VisitCases(
             [VisitCaseID]
