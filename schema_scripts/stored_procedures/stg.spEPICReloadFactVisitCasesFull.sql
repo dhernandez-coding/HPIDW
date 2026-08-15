@@ -18,7 +18,7 @@
 
 CREATE PROCEDURE [stg].[spEPICReloadFactVisitCasesFull] AS
 BEGIN
-    SET NOCOUNT ON;
+    SET NOCOUNT OFF;
 
     PRINT 'Creating @StagingTable...'
 

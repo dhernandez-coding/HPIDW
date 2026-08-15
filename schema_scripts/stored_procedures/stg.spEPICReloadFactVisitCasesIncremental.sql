@@ -12,21 +12,23 @@
 -- 7. 12/23/2024 - Diego Hernandez - Including height, weight and BMI
 -- 8. 02/04/2025 - Diego Hernandez - Added [VisitCasePrimaryScheduledProcedure], [VisitCaseLaterality],[VisitCaseEmergencyStatus]  for USPI
 -- 9. 03/26/2025 - Diego Hernandez -Include temp table
--- 10.04/08/2025 - Diego Hernandez - Changing to @stagingtable to manage failures 
+-- 10.04/08/2025 - Diego Hernandez - Changing to #StagingTable to manage failures 
 -- 11. 08/12/2026 - Diego Hernandez - OpenQuery
 -- 12. 8/12/2026 - Eric Silvestri - added Incremental load
+-- 13. 8/14/2026 - Chris Cross - Updated incremental load to be based on record last updated date instead of surgery date which can change
 -- =============================================
-
+--SELECT COUNT(1) FROM fact.VisitCases vc where vc.VisitCaseDatesourceID = 5 --102213
 CREATE PROCEDURE [stg].[spEPICReloadFactVisitCasesIncremental] AS
 BEGIN
-    SET NOCOUNT ON;
+    SET NOCOUNT Off;
 
 	
 	DECLARE @DaysToReload int = 30
 
-    PRINT 'Creating @StagingTable...'
+    PRINT 'Creating #StagingTable...'
 
-    DECLARE @StagingTable table 
+	DROP TABLE IF EXISTS #StagingTable
+    CREATE TABLE #StagingTable 
     (
         VisitCaseID VARCHAR(100) NOT NULL,
         VisitCaseDatesourceID INT NULL,
@@ -130,8 +132,8 @@ BEGIN
         GROUP BY orc.or_case_id
     ');
 
-    PRINT 'Inserting records from Datasource into @StagingTable....'
-    INSERT INTO @StagingTable (
+    PRINT 'Inserting records from Datasource into #StagingTable....'
+    INSERT INTO #StagingTable (
         [VisitCaseID]
         ,[VisitCaseDatesourceID]
         ,[VisitCaseSourceID]
@@ -289,6 +291,7 @@ BEGIN
         ,l.Lateralities as VisitCaseLaterality
         ,r.EMERG_STATUS_YN as VisitCaseEmergencyStatus
         ,r.DELAY_REASON_NM AS VisitCaseDelayReason
+
     FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
         DECLARE @DaysToReload int = 30
 		SELECT
@@ -361,7 +364,8 @@ BEGIN
             zcadm.NAME AS VisitCaseAdmissionStatus,
             cp.PROC_DISPLAY_NAME,
             orl.EMERG_STATUS_YN,
-            rt.DELAY_REASON_NM
+            rt.DELAY_REASON_NM,
+			orc2.INSTANT_OF_UPD_DTTM 
         FROM CLARITY.ORGFILTER.OR_CASE orc
         LEFT JOIN CLARITY.ORGFILTER.or_log orl ON orc.or_case_id = orl.log_id
         LEFT JOIN CLARITY.ORGFILTER.F_LOG_BASED lb ON lb.LOG_ID = orl.LOG_ID
@@ -389,18 +393,24 @@ BEGIN
         LEFT JOIN CLARITY.ORGFILTER.V_CASE_ROOM_TURNOVER rt ON rt.CASE_ID = orc.or_case_id
         LEFT JOIN CLARITY.ORGFILTER.ZC_OR_ANESTH_TYPE anz ON anz.ANESTHESIA_TYPE_C = lb.PRIMARY_ANES_TYPE_C
         LEFT JOIN CLARITY.ORGFILTER.ZC_ADM_SOURCE zcadm ON peh.ADMIT_SOURCE_C = zcadm.ADMIT_SOURCE_C
+		LEFT JOIN CLARITY.ORGFILTER.OR_CASE_2 orc2 ON orc2.CASE_ID = orc.OR_CASE_ID
         WHERE loc.serv_area_id IN (430, 425)
-			AND orc.surgery_date >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 30 days*/
+			--AND orc.surgery_date >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 30 days*/
+			AND convert(date,orc2.INSTANT_OF_UPD_DTTM) >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions updated in the last 30 days*/
     ') r
     LEFT JOIN #Laterality l ON l.VisitCaseID = r.or_case_id;
 
-    IF (SELECT COUNT(1) FROM @StagingTable) >= 10
+    IF (SELECT COUNT(1) FROM #StagingTable) >= 10
     BEGIN
         --PRINT 'At least 10 records found. Proceeding to delete and reload.'
         --DELETE FROM fact.VisitCases WHERE VisitCaseDatesourceID = 5;
-		PRINT 'Deleting records posted in the last' + convert(varchar(10),@DaysToReload) + ' days....'
-		DELETE FROM fact.VisitCases WHERE VisitCaseDatesourceID = 5 AND VisitCaseServiceDate >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 30 days*/
-        
+		PRINT 'Deleting records updated in the last' + convert(varchar(10),@DaysToReload) + ' days....'
+		--DELETE FROM fact.VisitCases WHERE VisitCaseDatesourceID = 5 AND VisitCaseServiceDate >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 30 days*/
+        DELETE A
+		FROM fact.VisitCases A 
+		INNER JOIN #StagingTable B ON B.VisitCaseID = A.VisitCaseID
+
+
         INSERT INTO fact.VisitCases(
             [VisitCaseID]
             ,[VisitCaseDatesourceID]
@@ -552,12 +562,15 @@ BEGIN
             ,[VisitCaseLaterality]
             ,[VisitCaseEmergencyStatus]
             ,[VisitCaseDelayReason]
-        FROM @StagingTable;
+        FROM #StagingTable;
     END
     ELSE
     BEGIN
         PRINT 'Less than 10 records in the staging table. Ending job without delete and reload...'
     END
+
+	
+	DROP TABLE IF EXISTS #StagingTable
 END;
 
 
@@ -568,9 +581,9 @@ END;
 --	BEGIN
 --    SET NOCOUNT ON;
 --	--Create stg table for full load
---	PRINT 'Creating @StagingTable...'
+--	PRINT 'Creating #StagingTable...'
 
---	DECLARE @StagingTable table 
+--	DECLARE #StagingTable table 
 --	(VisitCaseID VARCHAR(100) NOT NULL,
 --    VisitCaseDatesourceID INT NULL,
 --    VisitCaseSourceID VARCHAR(100) NULL,
@@ -673,8 +686,8 @@ END;
 --');
 
 
---	PRINT 'Inserting records from Datasource into @StagingTable....'
---	INSERT INTO @StagingTable (
+--	PRINT 'Inserting records from Datasource into #StagingTable....'
+--	INSERT INTO #StagingTable (
 --	   [VisitCaseID]
 --      ,[VisitCaseDatesourceID]
 --      ,[VisitCaseSourceID]
@@ -863,7 +876,7 @@ END;
 --	where 1=1 
 --	AND loc.serv_area_id in (430, 425); -- filter to only hpi and tpg while orgfilter is broken
 
---	IF (SELECT COUNT(1) FROM @StagingTable) >= 10
+--	IF (SELECT COUNT(1) FROM #StagingTable) >= 10
 --	 BEGIN
 --        PRINT 'At least 10 records found. Proceeding to delete and reload.'
 --		DELETE FROM fact.VisitCases WHERE VisitCaseDatesourceID = 5;
@@ -1019,7 +1032,7 @@ END;
 --	  ,[VisitCaseLaterality]
 --	  ,[VisitCaseEmergencyStatus]
 --	  ,[VisitCaseDelayReason]
---	  FROM @StagingTable;
+--	  FROM #StagingTable;
 --	  END
 --   ELSE
 --   BEGIN
