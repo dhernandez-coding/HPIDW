@@ -175,7 +175,7 @@ CREATE VIEW [rpt].[vEpicReferrals] as
 														 END--COALESCE(ppt.PracticeID,dt.PracticeID)
 
 	where 1=1 --and r.REFERRAL_ID IN (2460304,2183315)
-	and (d.SERV_AREA_ID in ('425','430') OR d1.SERV_AREA_ID in ('425','430') OR r.[SERV_AREA_ID] in ('425','430'))
+	and (d.SERV_AREA_ID in ('425','430','452000') OR d1.SERV_AREA_ID in ('425','430','452000') OR r.[SERV_AREA_ID] in ('425','430','452000'))
 	/*8.16.24 --Excluding this list of order procedures as they are not helpful for tracking referral activity for HPI*/
 	and ISNULL(op.DESCRIPTION,'') not like 'NM %' /*exclude Nuclear Med referrals*/
 	and ISNULL(op.DESCRIPTION,'') not in (
