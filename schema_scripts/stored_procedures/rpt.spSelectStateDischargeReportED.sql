@@ -10,11 +10,6 @@ CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED]
 						--43005005 --HPI CHS
 						--43006001 --HPI NWSH
 						as begin
-						
-SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
-
-
-SET @enddate = IsNull(@enddate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
 DECLARE @reportingyear int = YEAR(@startdate)
 DECLARE @reportingperiod int = MONTH(@startdate)
 DECLARE @LocationName varchar(100) = (SELECT case when @location = 43004001 then 'Community Hospital North'

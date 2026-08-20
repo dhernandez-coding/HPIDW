@@ -1,70 +1,13 @@
-/*
-================================================================================
- REWRITE NOTES - spSelectStateDischargeReportIP (read before deploying)
-================================================================================
- Same pattern as the OP rewrite: replace per-account correlated linked-server
- subqueries with bulk OPENQUERY pulls into local temp tables, scoped by a
- shared filter clause built once and reused (NOT a giant account-ID list -
- that blew past OPENQUERY's 8000-character limit on the OP version).
-
- Differences from the OP proc that shaped this rewrite:
-   - Diagnosis/procedure codes here come from V_CODING_ALL_DX_PX_LIST
-     (filtered by REF_BILL_CODE_SET_NAME = 'ICD-10-CM' or 'ICD-10-PCS'),
-     not HSP_ACCT_DX_LIST/HSP_TRANSACTIONS like the OP version.
-   - clarity_drg IS used here (drg.DRG_NUMBER -> the 'drg' field) - kept.
-   - ZC_DX_POA (pos) IS used here (feeds the ICD-10 padding/formatting
-     logic for ecode/princ_diag/oth_diag_code) - kept, unlike the OP
-     version where the equivalent join was dead code.
-   - clarity_edg (dx) is joined in the diagnosis subqueries but NONE of
-     its columns are ever referenced in the output - dropped as dead,
-     same category of finding as the OP rewrite's dead joins.
-   - ZC_MC_ADM_SOURCE (zcadmin), PAT_ENC_HSP (enc), CLARITY_DEP (dep) are
-     all joined in the outer driver but never referenced - dropped.
-   - Preserved as-is, not "fixed": the original's oth_diag_code subquery
-     does an INNER JOIN to ZC_DX_POA while princ_diag does a LEFT JOIN to
-     the same table - meaning an other-diagnosis row with no POA match
-     gets silently dropped while the principal diagnosis wouldn't be.
-     Replicated exactly via a HasPOSMatch flag rather than picking one
-     behavior for you - worth a second look on your end, this may be an
-     original inconsistency rather than intentional.
-   - Same two latent type-mixing bugs as the OP proc, fixed the same way:
-     'admit_source' and 'pat_disch_status' mix string literals with a
-     raw int column across CASE branches, which resolves the whole
-     expression to int by SQL Server's type precedence rules. Explicit
-     CONVERT(varchar(10), ...) added to the else branches.
-   - Same HSP_ACCOUNT_ID / PAT_ID legacy alpha-prefix issue as the OP
-     proc (values like 'Z2076144'): HSP_ACCOUNT_ID's >= 600000000 filter
-     uses TRY_CAST, and PAT_ID is declared varchar rather than int.
-   - 'pat_gender', 'pat_race', and 'pat_marital_stat' have no ELSE branch
-     in the original - an unmapped or NULL source code silently produces
-     NULL rather than a fallback value. Left as-is; flagging in case
-     that's not intentional.
-   - Dropped 'AND HSP.HSP_ACCOUNT_ID IS NOT NULL' from the original filter
-     as genuinely redundant (it's the join key from a non-null column) -
-     not a behavior change, just noise removed.
-
- Verify before running against production:
-   - Column types in the CREATE TABLE statements are reasonable guesses;
-     check against the real Clarity DDL, especially BIRTH_WEIGHT and
-     DRG_NUMBER's actual precision/length.
-   - This assumes REF_BILL_CODE, DX_POA_C, PX_DATE, LINE, SOURCE_name, and
-     REF_BILL_CODE_SET_NAME all live on V_CODING_ALL_DX_PX_LIST as used
-     in the original query.
-================================================================================
-*/
-
-CREATE PROCEDURE [rpt].[spSelectStateDischargeReportIP_NER] AS
+CREATE PROCEDURE [rpt].[spSelectStateDischargeReportIP_NEW]
 
 
-DECLARE @startdate DATETIME
-DECLARE @enddate DATETIME
-DECLARE @Location INT
-SET @startdate = '2026-07-01' --null,
-SET @enddate = '2026-08-01' --null,
-SET @Location = 43004001 --HPI CHN
+ @startdate datetime = null,
+ @enddate datetime = null,
+ @Location int = 43004001 --HPI CHN
  	--43005005 --HPI CHS
 	--43006001 --HPI NWSH
-BEGIN
+
+AS BEGIN
 
 SET NOCOUNT ON;
 
@@ -98,7 +41,7 @@ CREATE TABLE #TEMPAccounts (
 	DISCH_DATE_TIME     datetime     NULL,
 	ADMISSION_SOURCE_C  int          NULL,
 	ADMISSION_TYPE_C    int          NULL,
-	PATIENT_STATUS_C    int          NULL,
+	PATIENT_STATUS_C    varchar(20)  NULL,
 	TOT_CHGS            decimal(18,2) NULL,
 	BIRTH_WEIGHT        decimal(18,4) NULL,
 	PAT_MIDDLE_NAME     nvarchar(50) NULL,
@@ -207,13 +150,14 @@ CREATE INDEX IX_TEMPAccounts_AcctID ON #TEMPAccounts (HSP_ACCOUNT_ID);
    ============================================================ */
 CREATE TABLE #TEMPEcode (
 	HSP_ACCOUNT_ID bigint       NOT NULL,
+	LINE           int          NULL,
 	REF_BILL_CODE  varchar(20)  NULL,
 	POS_ABBR       varchar(5)   NULL
 );
 
 SET @innerSql = N'
 select
-	ecode.HSP_ACCOUNT_ID, ecode.REF_BILL_CODE, pos.ABBR as POS_ABBR
+	ecode.HSP_ACCOUNT_ID, ecode.LINE, ecode.REF_BILL_CODE, pos.ABBR as POS_ABBR
 from [CLARITY].[ORGFILTER].V_CODING_ALL_DX_PX_LIST ecode
 	left join [CLARITY].[ORGFILTER].ZC_DX_POA pos on ecode.DX_POA_C = pos.DX_POA_C
 	join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = ecode.HSP_ACCOUNT_ID
@@ -223,8 +167,8 @@ where ecode.SOURCE_name = ''External Cause of Injury Primary Code Set''
 ';
 
 SET @sql = N'
-INSERT INTO #TEMPEcode (HSP_ACCOUNT_ID, REF_BILL_CODE, POS_ABBR)
-SELECT HSP_ACCOUNT_ID, REF_BILL_CODE, POS_ABBR
+INSERT INTO #TEMPEcode (HSP_ACCOUNT_ID, LINE, REF_BILL_CODE, POS_ABBR)
+SELECT HSP_ACCOUNT_ID, LINE, REF_BILL_CODE, POS_ABBR
 FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''' + REPLACE(@innerSql, '''', '''''') + N''')
 ';
 EXEC sp_executesql @sql;
@@ -523,7 +467,7 @@ DECLARE @Dt XML=
 									when 10 then '04'
 									when 09 then '02'
 									when 30 then '02'
-									 else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+									 else acct.PATIENT_STATUS_C
 										   end as 'pat_disch_status',
 
 					convert(numeric,acct.BIRTH_WEIGHT, 100) as 'birth_weight',
@@ -582,6 +526,7 @@ DECLARE @Dt XML=
 		ELSE ecode.POS_ABBR END) END) as 'ecode'
 								   from #TEMPEcode ecode
 							 		where  acct.HSP_ACCOUNT_ID=ecode.HSP_ACCOUNT_ID
+							order by ecode.LINE
 							for xml Path(''), TYPE
 					),
 					case
@@ -752,6 +697,7 @@ DECLARE @Dt XML=
 								where acct.HSP_ACCOUNT_ID=diag2.HSP_ACCOUNT_ID
 										and diag2.LINE <>1
 										and diag2.HasPOSMatch = 1
+								order by diag2.LINE
 								for xml path(''), type, elements
 
 							)
@@ -790,6 +736,7 @@ DECLARE @Dt XML=
 				where acct.HSP_ACCOUNT_ID=proc1.HSP_ACCOUNT_ID
 					   and   proc1.LINE <> 1
 
+					order by proc1.LINE
 						for xml Path('proc'), TYPE
 
 						)
