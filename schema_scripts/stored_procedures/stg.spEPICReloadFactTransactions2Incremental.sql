@@ -5,6 +5,7 @@ CREATE PROCEDURE [stg].[spEPICReloadFactTransactions2Incremental] as
 Change Control:
 	1. 9/4/24 - Chris Cross - Removed PB loading sections as those are now loading to fact.TransactionsPB
 	2. 9/19/25 - Diego Hernandez - Including AdjCategory
+	3. 8/20/26 - Chris Cross - Changed to OpenQuery
 
 */
 
@@ -55,27 +56,32 @@ INSERT INTO fact.Transactions2
 	  )
 
  /*HB Transactions*/
+ SELECT
+	A.*
+ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],'
+DECLARE @DaysToReload int = 10
+
   SELECT 
-	--CONCAT('8~CHG~',c.PATNO,'~',c.BATCH,'~',c.SEQ#,'~',c.REF#) as TransactionID /*This is not unique*/
-	'5' as TransactionDatasourceID
-	,CONCAT('HB~',tx.TX_ID) as TransactionSourceID
+	--CONCAT(''5~CHG~'',c.PATNO,''~'',c.BATCH,''~'',c.SEQ#,''~'',c.REF#) as TransactionID /*This is not unique*/
+	''5'' as TransactionDatasourceID
+	,CONCAT(''HB~'',tx.TX_ID) as TransactionSourceID
 	,NULL AS TransactionParentSourceID
-	,CASE WHEN tx.HSP_ACCOUNT_ID is not null THEN CONCAT('5~',tx.HSP_ACCOUNT_ID) END as TransactionVisitID
-	,CASE WHEN tx.HSP_ACCOUNT_ID is not null THEN CONCAT('5~',tx.HSP_ACCOUNT_ID) END as TransactionAccountID
-	,CASE WHEN a.PRIM_ENC_CSN_ID is not null THEN CONCAT('5~',a.PRIM_ENC_CSN_ID) END AS TransactionEncounterID
-	,CASE WHEN tx.DEPARTMENT is not null THEN CONCAT('5~',tx.DEPARTMENT) END as TransactionDepartmentID
-	,CASE WHEN COALESCE(tx.PAYOR_ID, epp.PAYOR_ID, a.PRIMARY_PAYOR_ID) is not null THEN CONCAT('5~',COALESCE(tx.PAYOR_ID, epp.PAYOR_ID, a.PRIMARY_PAYOR_ID)) END as TransactionPayerID
-	,CASE WHEN COALESCE(op.AUTHRZING_PROV_ID,op.BILLING_PROV_ID,tx.BILLING_PROV_ID,tx.PERFORMING_PROV_ID) is not null THEN CONCAT('5~',COALESCE(op.AUTHRZING_PROV_ID,op.BILLING_PROV_ID,tx.BILLING_PROV_ID,tx.PERFORMING_PROV_ID)) END as TransactionBillingProviderID
-	,'HB' as TransactionBillingType
-	,CASE WHEN tx.TX_TYPE_HA_C = 1 THEN 'Charge'
-		  WHEN tx.TX_TYPE_HA_C = 2 THEN 'Payment'
-		  WHEN tx.TX_TYPE_HA_C in (3,4) THEN 'Adjustment' END as TransactionType
-	,CASE WHEN tx.TX_TYPE_HA_C = 1 THEN 'Charge - New'
-		  WHEN tx.TX_TYPE_HA_C = 2 AND tx.BAD_DEBT_FLAG_YN = 'Y' THEN 'Payment - Bad Debt'
-		  WHEN tx.TX_TYPE_HA_C = 2 THEN 'Payment - Regular'
-		  WHEN tx.TX_TYPE_HA_C in (3) THEN 'Adjustment - Debit'
-		  WHEN tx.TX_TYPE_HA_C in (4) THEN 'Adjustment - Credit' END  as TransactionSubType
-	,CASE WHEN LEFT(rc.REVENUE_CODE,1) = '0' THEN RIGHT(rc.REVENUE_CODE,3) ELSE rc.REVENUE_CODE END as TransactionRevenueCode
+	,CASE WHEN tx.HSP_ACCOUNT_ID is not null THEN CONCAT(''5~'',tx.HSP_ACCOUNT_ID) END as TransactionVisitID
+	,CASE WHEN tx.HSP_ACCOUNT_ID is not null THEN CONCAT(''5~'',tx.HSP_ACCOUNT_ID) END as TransactionAccountID
+	,CASE WHEN a.PRIM_ENC_CSN_ID is not null THEN CONCAT(''5~'',a.PRIM_ENC_CSN_ID) END AS TransactionEncounterID
+	,CASE WHEN tx.DEPARTMENT is not null THEN CONCAT(''5~'',tx.DEPARTMENT) END as TransactionDepartmentID
+	,CASE WHEN COALESCE(tx.PAYOR_ID, epp.PAYOR_ID, a.PRIMARY_PAYOR_ID) is not null THEN CONCAT(''5~'',COALESCE(tx.PAYOR_ID, epp.PAYOR_ID, a.PRIMARY_PAYOR_ID)) END as TransactionPayerID
+	,CASE WHEN COALESCE(op.AUTHRZING_PROV_ID,op.BILLING_PROV_ID,tx.BILLING_PROV_ID,tx.PERFORMING_PROV_ID) is not null THEN CONCAT(''5~'',COALESCE(op.AUTHRZING_PROV_ID,op.BILLING_PROV_ID,tx.BILLING_PROV_ID,tx.PERFORMING_PROV_ID)) END as TransactionBillingProviderID
+	,''HB'' as TransactionBillingType
+	,CASE WHEN tx.TX_TYPE_HA_C = 1 THEN ''Charge''
+		  WHEN tx.TX_TYPE_HA_C = 2 THEN ''Payment''
+		  WHEN tx.TX_TYPE_HA_C in (3,4) THEN ''Adjustment'' END as TransactionType
+	,CASE WHEN tx.TX_TYPE_HA_C = 1 THEN ''Charge - New''
+		  WHEN tx.TX_TYPE_HA_C = 2 AND tx.BAD_DEBT_FLAG_YN = ''Y'' THEN ''Payment - Bad Debt''
+		  WHEN tx.TX_TYPE_HA_C = 2 THEN ''Payment - Regular''
+		  WHEN tx.TX_TYPE_HA_C in (3) THEN ''Adjustment - Debit''
+		  WHEN tx.TX_TYPE_HA_C in (4) THEN ''Adjustment - Credit'' END  as TransactionSubType
+	,CASE WHEN LEFT(rc.REVENUE_CODE,1) = ''0'' THEN RIGHT(rc.REVENUE_CODE,3) ELSE rc.REVENUE_CODE END as TransactionRevenueCode
 	,rc.BILL_DESC as TransactionRevenueCodeDescription
 	,eap.PROC_CODE as TransactionCode
 	,COALESCE(tx.PROCEDURE_DESC, eap.BILL_DESC, eap.PROC_NAME) as TransactionDescription
@@ -94,27 +100,28 @@ INSERT INTO fact.Transactions2
 	,tx.TX_POST_DATE as TransactionDateOfPosting
 	,tx.TX_POST_DATE as TransactionDateOfBilling
 	,NULL AS TransactionDateOfVoid
-	,CONCAT(YEAR(tx.TX_POST_DATE),' - ', RIGHT(concat('00',MONTH(tx.TX_POST_DATE)),2)) as TransactionReportingPeriodID
-	,CASE WHEN sts.ACTIVE_TX_YN = 'Y' THEN 'Active' ELSE 'Inactive' END as TransactionStatus 
+	,CONCAT(YEAR(tx.TX_POST_DATE),'' - '', RIGHT(concat(''00'',MONTH(tx.TX_POST_DATE)),2)) as TransactionReportingPeriodID
+	,CASE WHEN sts.ACTIVE_TX_YN = ''Y'' THEN ''Active'' ELSE ''Inactive'' END as TransactionStatus 
 	,1 as TransactionIsActive
 	,GETDATE() as TransactionUpdatedDatetime
 	,cat.NAME as TransactionAdjustmentCategory
 
  --select EAP.* 
- FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].HSP_TRANSACTIONS tx
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].HSP_ACCOUNT a ON a.HSP_ACCOUNT_ID = tx.HSP_ACCOUNT_ID
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].CLARITY_EAP_2 eapp ON eapp.PROC_ID = tx.PROC_ID
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].ZC_ADJUSTMENT_CAT cat on cat.ADJUSTMENT_CAT_C =eapp.ADJUSTMENT_CAT_C
-	--LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].ZC_TX_TYPE_HA typ ON typ.TX_TYPE_HA_C = tx.TX_TYPE_HA_C
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].CLARITY_EAP eap ON eap.PROC_ID = tx.PROC_ID
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].CL_UB_REV_CODE rc ON rc.UB_REV_CODE_ID = tx.UB_REV_CODE_ID
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].HSP_TX_STATUS sts ON sts.TX_ID = tx.TX_ID
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].CLARITY_EPP epp ON epp.BENEFIT_PLAN_ID = tx.PRIMARY_PLAN_ID
-	LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[Clarity].[ORGFILTER].ORDER_PROC op ON op.ORDER_PROC_ID = tx.ORDER_ID
+ FROM [Clarity].[ORGFILTER].HSP_TRANSACTIONS tx
+	LEFT JOIN [Clarity].[dbo].HSP_ACCOUNT a ON a.HSP_ACCOUNT_ID = tx.HSP_ACCOUNT_ID
+	LEFT JOIN [Clarity].[dbo].CLARITY_EAP_2 eapp ON eapp.PROC_ID = tx.PROC_ID
+	LEFT JOIN [Clarity].[dbo].ZC_ADJUSTMENT_CAT cat on cat.ADJUSTMENT_CAT_C =eapp.ADJUSTMENT_CAT_C
+	--LEFT JOIN [Clarity].[ORGFILTER].ZC_TX_TYPE_HA typ ON typ.TX_TYPE_HA_C = tx.TX_TYPE_HA_C
+	LEFT JOIN [Clarity].[dbo].CLARITY_EAP eap ON eap.PROC_ID = tx.PROC_ID
+	LEFT JOIN [Clarity].[dbo].CL_UB_REV_CODE rc ON rc.UB_REV_CODE_ID = tx.UB_REV_CODE_ID
+	LEFT JOIN [Clarity].[dbo].HSP_TX_STATUS sts ON sts.TX_ID = tx.TX_ID
+	LEFT JOIN [Clarity].[dbo].CLARITY_EPP epp ON epp.BENEFIT_PLAN_ID = tx.PRIMARY_PLAN_ID
+	LEFT JOIN [Clarity].[dbo].ORDER_PROC op ON op.ORDER_PROC_ID = tx.ORDER_ID
  WHERE 1=1 
  AND tx.TX_TYPE_HA_C in (1,2,3,4)
  AND tx.SERV_AREA_ID in (425,430)
  AND tx.TX_POST_DATE >= DATEADD(DAY,-@DaysToReload, convert(date,GETDATE())) /*Only load transactions from the last 10 days*/
+ ') A
 
 END
 
