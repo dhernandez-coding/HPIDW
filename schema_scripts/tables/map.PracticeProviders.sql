@@ -1,5 +1,5 @@
 CREATE TABLE [map].[PracticeProviders] (
-    [PracticeProviderID] INT IDENTITY(1,1) NOT NULL,
+    [PracticeProviderID] INT NOT NULL,
     [PracticeID] VARCHAR(100) NOT NULL,
     [ProviderID] VARCHAR(100) NOT NULL,
     [ProviderAbbreviation] VARCHAR(100) NULL,
@@ -16,7 +16,6 @@ CREATE TABLE [map].[PracticeProviders] (
     [PracticeProviderGLType] VARCHAR(30) NULL,
     [PracticeProviderGLTypeID] VARCHAR(30) NULL,
     [PracticeProviderGLProviderID] VARCHAR(10) NULL,
-    [PracticeProviderDHSType] INT NULL,
-    CONSTRAINT [PK__Practice__5E7F77EEDAF98428] PRIMARY KEY ([PracticeProviderID])
+    [PracticeProviderDHSType] INT NULL
 );
 GO

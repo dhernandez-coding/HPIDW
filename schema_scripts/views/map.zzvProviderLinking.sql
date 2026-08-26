@@ -1,5 +1,6 @@
-create view map.zzvProviderLinking
-with schemabinding as
+CREATE view [map].[zzvProviderLinking]
+as
+--with schemabinding as
 select [ID]
       ,[ParentProviderID]
       ,[ChildProviderID]

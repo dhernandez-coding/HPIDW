@@ -1,4 +1,4 @@
-CREATE TABLE [dim].[Practices_HERO] (
+CREATE TABLE [dim].[Practices_PREHERO] (
     [PracticeID] VARCHAR(100) NOT NULL,
     [PracticeDataSourceID] INT NULL,
     [PracticeSourceID] VARCHAR(100) NULL,
@@ -13,6 +13,7 @@ CREATE TABLE [dim].[Practices_HERO] (
     [PracticeGLLocation] VARCHAR(50) NULL,
     [PracticeGLPracticeID] VARCHAR(10) NULL,
     [PracticeSpecialty] VARCHAR(10) NULL,
-    [PracticeSameStoreDate] DATE NULL
+    [PracticeSameStoreDate] DATE NULL,
+    CONSTRAINT [PK__Practice__352A161230D0E8CA] PRIMARY KEY ([PracticeID])
 );
 GO

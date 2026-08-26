@@ -1,6 +1,7 @@
 CREATE View [map].[vPracticeProviders] 
-WITH SCHEMABINDING
 as
+--WITH SCHEMABINDING
+--as
 
 select pp.Id as PracticeProviderID
       ,p.[PracticePracticeID] as PracticeID

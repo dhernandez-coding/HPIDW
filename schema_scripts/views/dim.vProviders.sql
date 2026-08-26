@@ -1,6 +1,7 @@
 CREATE view [dim].[vProviders] 
-with schemabinding as
 
+as
+--with schemabinding  as
 SELECT [ProviderID]
       ,[ParentProviderID]
       ,[ProviderDataSourceID]

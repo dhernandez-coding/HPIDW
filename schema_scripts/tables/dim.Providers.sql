@@ -19,7 +19,6 @@ CREATE TABLE [dim].[Providers] (
     [ProviderUPIN] VARCHAR(50) NULL,
     [ProviderNPI] VARCHAR(50) NULL,
     [ProviderIsActive] BIT NULL,
-    [ProviderUpdatedDateTime] DATETIME NULL,
-    CONSTRAINT [PK_Provider] PRIMARY KEY ([ProviderID])
+    [ProviderUpdatedDateTime] DATETIME NULL
 );
 GO

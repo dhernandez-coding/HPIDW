@@ -1,4 +1,4 @@
-create view hero.vPractices as
+CREATE view [hero].[vPractices] as
 
 
  WITH SameStoreMap AS (
@@ -78,7 +78,7 @@ create view hero.vPractices as
 	  from hero.practicess p
 	  left join  hero.companiess c on p.CompanyID = c.CompanyID
 	  
-	  left join  hero.specialtiess s on p.SpecialtyID = s.SpecialtyID
+	  left join  hero.specialtiess s on p.PracticeSpecialtyID = s.SpecialtyID
 	  LEFT JOIN SameStoreMap ss 
     ON ss.PracticeID = p.PracticePracticeID
 GO

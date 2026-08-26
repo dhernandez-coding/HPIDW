@@ -68,7 +68,8 @@ select
 from [hero-db].hpi.dbo.providerss
 
 --UPSERT 0~ records to dim.Providers
-MERGE dim.Providers_HERO AS target
+MERGE dim.Providers--_Hero 
+AS target
 USING (
     SELECT
         [ProviderProviderID] as ProviderID
@@ -173,76 +174,90 @@ WHEN NOT MATCHED BY TARGET THEN
 
 
 
+--	MERGE dim.Providers--_Hero AS target
 
-	--CREATE UPDATE PRoviders from other systems added via the app(shouldnt ever update, just insert providers that were added to the app as aliases
-	MERGE dim.Providers_HERO AS target
-USING (
-    SELECT
-        concat(concat(pa.SourceSystemId,'~'), pa.value)  as ProviderID
-        ,pa.SourceSystemId as [ProviderDataSourceID]
-        ,pa.Value as [ProviderSourceID]
-        ,p.[ProviderAbbreviation]
-        ,p.[ProviderFirstName]
-        ,p.[ProviderMiddleInitial]
-        ,p.[ProviderLastName]
-        ,p.[ProviderGender]
-        ,p.[ProviderSuffix]        ,p.[ProviderStreetAddress1]
-        ,p.[ProviderStreetAddress2]
-        ,p.[ProviderCity]
-        ,p.[ProviderState]
-        ,p.[ProviderZipCode]
-        ,p.[ProviderPhone]
-        ,p.[ProviderFax]
-        ,p.[ProviderSpecialtyID]
-        ,p.[ProviderUPIN]
-        ,p.[ProviderNPI]
-        ,p.[ProviderIsActive]
-        ,p.[ProviderUpdatedDateTime]
-    FROM [hero-db].hpi.dbo.ProviderAliases pa	left join [hero-db].hpi.dbo.Providerss p on pa.ProviderID = p.ProviderID
-    
-) AS source
-ON target.ProviderID = source.ProviderID
+--USING (
 
-WHEN NOT MATCHED BY TARGET THEN
-    INSERT (	        [ProviderID]
-        ,[ProviderDataSourceID]
-        ,[ProviderSourceID]		 ,[ProviderAbbreviation]
-        ,[ProviderFirstName]
-        ,[ProviderMiddleInitial]
-        ,[ProviderLastName]
-        ,[ProviderGender]
-        ,[ProviderSuffix]
-        ,[ProviderStreetAddress1]
-        ,[ProviderStreetAddress2]
-        ,[ProviderCity]
-        ,[ProviderState]
-        ,[ProviderZipCode]
-        ,[ProviderPhone]		,[ProviderFax]
-        ,[ProviderSpecialtyID]
-        ,[ProviderUPIN]		,[ProviderNPI]
-        ,[ProviderIsActive]
-        ,[ProviderUpdatedDateTime]
-    )
-    VALUES (
-        source.ProviderID
-        ,source.ProviderDataSourceID
-        ,source.ProviderSourceID
-        ,source.ProviderAbbreviation
-        ,source.ProviderFirstName
-        ,source.ProviderMiddleInitial
-        ,source.ProviderLastName
-        ,source.ProviderGender
-        ,source.ProviderSuffix
-        ,source.ProviderStreetAddress1
-        ,source.ProviderStreetAddress2
-        ,source.ProviderCity
-        ,source.ProviderState		,source.ProviderZipCode
-        ,source.ProviderPhone
-        ,source.ProviderFax
-        ,source.ProviderSpecialtyID
-        ,source.ProviderUPIN
-        ,source.ProviderNPI
-        ,source.ProviderIsActive
-        ,ISNULL(TRY_CONVERT(datetime, source.ProviderUpdatedDateTime), '1900-01-01')
-    );
+--    SELECT
+--        concat(concat(pa.SourceSystemId,'~'), pa.value)  as ProviderID
+--        ,pa.SourceSystemId as [ProviderDataSourceID]
+--        ,pa.Value as [ProviderSourceID]
+--        ,p.[ProviderAbbreviation]
+--        ,p.[ProviderFirstName]
+--        ,p.[ProviderMiddleInitial]
+--        ,p.[ProviderLastName]
+--        ,p.[ProviderGender]
+--        ,p.[ProviderSuffix]
+--        ,p.[ProviderStreetAddress1]
+--        ,p.[ProviderStreetAddress2]
+--        ,p.[ProviderCity]
+--        ,p.[ProviderState]
+--        ,p.[ProviderZipCode]
+--        ,p.[ProviderPhone]
+--        ,p.[ProviderFax]
+--        ,p.[ProviderSpecialtyID]
+--        ,p.[ProviderUPIN]
+--        ,p.[ProviderNPI]
+--        ,p.[ProviderIsActive]
+--        ,p.[ProviderUpdatedDateTime]
+--    FROM [hero-db].hpi.dbo.ProviderAliases pa
+--	left join [hero-db].hpi.dbo.Providerss p on pa.ProviderID = p.ProviderID
+    
+
+--) AS source
+
+--ON target.ProviderID = source.ProviderID
+
+--WHEN NOT MATCHED BY TARGET THEN
+
+--    INSERT (
+--	        [ProviderID]
+--        ,[ProviderDataSourceID]
+--        ,[ProviderSourceID]
+--		 ,[ProviderAbbreviation]
+--        ,[ProviderFirstName]
+--        ,[ProviderMiddleInitial]
+--        ,[ProviderLastName]
+--        ,[ProviderGender]
+--        ,[ProviderSuffix]
+--        ,[ProviderStreetAddress1]
+--        ,[ProviderStreetAddress2]
+--        ,[ProviderCity]
+--        ,[ProviderState]
+--        ,[ProviderZipCode]
+--        ,[ProviderPhone]
+--		,[ProviderFax]
+--        ,[ProviderSpecialtyID]
+--        ,[ProviderUPIN]
+--		,[ProviderNPI]
+--        ,[ProviderIsActive]
+--        ,[ProviderUpdatedDateTime]
+--    )
+
+--    VALUES (
+--        source.ProviderID
+--        ,source.ProviderDataSourceID
+--        ,source.ProviderSourceID
+--        ,source.ProviderAbbreviation
+--        ,source.ProviderFirstName
+--        ,source.ProviderMiddleInitial
+--        ,source.ProviderLastName
+--        ,source.ProviderGender
+--        ,source.ProviderSuffix
+--        ,source.ProviderStreetAddress1
+--        ,source.ProviderStreetAddress2
+--        ,source.ProviderCity
+--        ,source.ProviderState
+--		,source.ProviderZipCode
+--        ,source.ProviderPhone
+--        ,source.ProviderFax
+--        ,source.ProviderSpecialtyID
+--        ,source.ProviderUPIN
+--        ,source.ProviderNPI
+--        ,source.ProviderIsActive
+--        ,ISNULL(TRY_CONVERT(datetime, source.ProviderUpdatedDateTime), '1900-01-01')
+
+--    );
+
+	--CREATE UPDATE PRoviders from other systems added via the app(shouldnt ever update, just insert providers that were added to the app as aliases
 GO

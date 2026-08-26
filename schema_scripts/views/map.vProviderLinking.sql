@@ -1,5 +1,6 @@
 CREATE view [map].[vProviderLinking]
-with schemabinding as
+as
+--with schemabinding as
 select [ID]
       ,[ParentProviderID]
       ,[ChildProviderID]

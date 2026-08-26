@@ -1,5 +1,6 @@
 CREATE view [hero].[_vProviders]  
-with schemabinding as
+as
+--with schemabinding as
 --DROP TABLE IF EXISTS #tempProviderAliases;
 --DROP TABLE IF EXISTS #tempSourceSystems;
 --DROP TABLE IF EXISTS #tempProviders;

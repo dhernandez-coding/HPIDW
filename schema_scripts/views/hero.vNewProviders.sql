@@ -47,9 +47,9 @@ FROM (
                 SELECT s.*
                 FROM (
                     SELECT
-                        [ProviderID] as ProviderProviderID
-                        ,[ProviderDataSourceID]
-                        ,[ProviderSourceID]
+                        concat('0~', ProviderNPI) as ProviderProviderID
+                        ,0 as ProviderDataSourceId
+                        ,ProviderNPI as ProviderSourceId
                         ,[ProviderAbbreviation]
                         ,[ProviderFirstName]
                         ,[ProviderMiddleInitial]

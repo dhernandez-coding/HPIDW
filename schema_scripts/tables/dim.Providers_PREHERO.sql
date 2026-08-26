@@ -1,4 +1,4 @@
-CREATE TABLE [dim].[Providers_HERO] (
+CREATE TABLE [dim].[Providers_PREHERO] (
     [ProviderID] VARCHAR(50) NOT NULL,
     [ProviderDataSourceID] INT NOT NULL,
     [ProviderSourceID] VARCHAR(50) NOT NULL,
@@ -19,6 +19,7 @@ CREATE TABLE [dim].[Providers_HERO] (
     [ProviderUPIN] VARCHAR(50) NULL,
     [ProviderNPI] VARCHAR(50) NULL,
     [ProviderIsActive] BIT NULL,
-    [ProviderUpdatedDateTime] DATETIME NULL
+    [ProviderUpdatedDateTime] DATETIME NULL,
+    CONSTRAINT [PK_Provider] PRIMARY KEY ([ProviderID])
 );
 GO

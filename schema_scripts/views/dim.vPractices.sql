@@ -1,5 +1,6 @@
 CREATE VIEW [dim].[vPractices]
- with schemabinding as
+ as
+ --with schemabinding as
  
  WITH SameStoreMap AS (
 
