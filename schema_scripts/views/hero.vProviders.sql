@@ -1,4 +1,4 @@
-CREATE view hero.vProviders as
+CREATE view [hero].[vProviders] as
 
 
 SELECT
@@ -22,8 +22,12 @@ SELECT
 	,p.[ProviderState]
 	,p.[ProviderZipCode]
 	,p.[ProviderPhone]
-	,p.[ProviderFax]
-	,Concat('0~', cast(p.[ProviderSpecialtyID] as varchar)) as [ProviderSpecialtyID]
+	,p.[ProviderFax],
+	CASE 
+    WHEN p.ProviderSpecialtyID IS NULL THEN NULL
+    ELSE Concat('0~', cast(p.ProviderSpecialtyID as varchar))
+END AS [ProviderSpecialtyID]
+	--,Concat('0~', cast(p.[ProviderSpecialtyID] as varchar)) as [ProviderSpecialtyID]
 	,p.[ProviderSpecialtyID] as ParentSpecialtyID
 	,s.SpecialtyName as ParentSpecialtyName
 	,p.[ProviderUPIN]
@@ -34,6 +38,7 @@ SELECT
 	,p.[ProviderUpdatedDateTime]
 
 	--select * from [HPIDW].[dim].[Providers] p
+	--select * 
 FROM [hero].[Providerss] p
 	left join hero.ProviderAliases pa on p.ProviderID = pa.ProviderID --MappedId is built when buildint the temp table this is sourced from #LRR
 	

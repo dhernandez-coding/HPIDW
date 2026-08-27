@@ -176,7 +176,7 @@ SELECT
       ,[VisitCaseUpdatedDatetime]
 FROM [HPIDW].[fact].[VisitCases] vc
 	LEFT JOIN dim.vProviders p ON p.ProviderID = vc.VisitCasePrimaryProviderID
-	LEFT JOIN dim.Specialties spc ON spc.SpecialtyID = p.ParentSpecialtyID
+	LEFT JOIN dim.vSpecialties spc ON spc.SpecialtyID = p.ParentSpecialtyID
 	LEFT JOIN dim.ServiceLines sl ON sl.ServiceLineName = spc.SpecialtyName /*Service Lines matched to Specialty by Name*/
 	LEFT JOIN dim.Rooms r ON r.RoomID = vc.VisitCaseRoomID
 	LEFT JOIN dim.Locations l ON l.LocationID = vc.VisitCaseLocationID

@@ -16,7 +16,7 @@ CREATE TABLE [hero].[Providerss] (
     [ProviderZipCode] NVARCHAR(MAX) NOT NULL,
     [ProviderPhone] NVARCHAR(MAX) NOT NULL,
     [ProviderFax] NVARCHAR(MAX) NOT NULL,
-    [ProviderSpecialtyID] INT NOT NULL,
+    [ProviderSpecialtyID] INT NULL,
     [ProviderUPIN] NVARCHAR(MAX) NOT NULL,
     [ProviderNPI] NVARCHAR(MAX) NOT NULL,
     [ProviderIsActive] BIT NOT NULL,

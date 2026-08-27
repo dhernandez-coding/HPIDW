@@ -53,7 +53,12 @@ select
       ,[ProviderZipCode]
       ,[ProviderPhone]
       ,[ProviderFax]
-      ,[ProviderSpecialtyID]
+
+
+      , NULLIF(NULLIF(ProviderSpecialtyID, 0), -1) AS [ProviderSpecialtyID]
+
+
+
       ,[ProviderUPIN]
       ,[ProviderNPI]
       ,[ProviderIsActive]
@@ -88,12 +93,18 @@ USING (
         ,[ProviderZipCode]
         ,[ProviderPhone]
         ,[ProviderFax]
-        ,[ProviderSpecialtyID]
+            ,CASE 
+    WHEN ProviderSpecialtyID BETWEEN 1 AND 13 
+        THEN '0~' + CAST(ProviderSpecialtyID AS VARCHAR(10))
+    ELSE CAST(NULLIF(NULLIF(ProviderSpecialtyID, 0), -1) AS VARCHAR(10))
+ END AS ProviderSpecialtyID
         ,[ProviderUPIN]
         ,[ProviderNPI]
         ,[ProviderIsActive]
         ,[ProviderUpdatedDateTime]
-    FROM [hero-db].hpi.dbo.providerss
+
+		--select *
+    FROM [hero-db].hpi.dbo.providerss 
     WHERE [ProviderProviderID] LIKE '0~%' and ProviderNPI is not null and Trim(ProviderNPI) != ''
 ) AS source
 ON target.ProviderID = source.ProviderID
@@ -115,7 +126,15 @@ WHEN MATCHED THEN
         ,target.ProviderZipCode        = source.ProviderZipCode
         ,target.ProviderPhone          = source.ProviderPhone
         ,target.ProviderFax            = source.ProviderFax
-        ,target.ProviderSpecialtyID    = source.ProviderSpecialtyID
+        ,target.ProviderSpecialtyID = CASE 
+    WHEN CHARINDEX('~', source.ProviderSpecialtyID) > 0 
+        THEN source.ProviderSpecialtyID
+    WHEN source.ProviderSpecialtyID IS NULL 
+        THEN NULL
+    ELSE target.ProviderSpecialtyID
+ END
+  
+
         ,target.ProviderUPIN           = source.ProviderUPIN
         ,target.ProviderNPI            = source.ProviderNPI
         ,target.ProviderIsActive       = source.ProviderIsActive
@@ -173,7 +192,7 @@ WHEN NOT MATCHED BY TARGET THEN
 
 
 
-
+	--select * From [hero-db].hpi.dbo.specialtiess
 --	MERGE dim.Providers--_Hero AS target
 
 --USING (
