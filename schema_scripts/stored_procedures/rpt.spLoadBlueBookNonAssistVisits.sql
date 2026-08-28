@@ -303,50 +303,40 @@ IF OBJECT_ID('tempdb..#TempCharges') IS NOT NULL DROP TABLE #TempCharges
 
 		UNION ALL
 
-		/* THP DATA */ 
-		SELECT
-		    YEAR(v.Month) AS FiscalYear,
-		    MONTH(v.Month) AS FiscalPeriod,
-		    FORMAT(v.Month,'MMM-yy') AS FiscalYearPeriod,
-		
-		    'Non-Assist Visits' AS ReportSection,
-		    'Office Visits' AS ReportGroupLevel1,
-		    NULL AS ReportGroupLevel2,
-		    NULL AS ReportGroupLevel3,
-		
-		    p.PracticeID,
-		    ISNULL(pl.ParentProviderID, 'UNKNOWN'),
-		
-		    SUM(v.Claim_Count) AS FiscalPeriodValue,
-		    GETDATE() AS UpdatedDatetime
-		
-		FROM [HPIDW].[stg].[THPVolumes] v
-		
-		LEFT JOIN dim.Providers pp
-		    ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
-		    AND pp.ProviderDataSourceID = 17
-		
-		LEFT JOIN map.vProviderLinking pl 
-		    ON pl.ChildProviderID = pp.ProviderID
-		
-		LEFT JOIN map.PracticeProviders mpp
-		    ON mpp.ProviderID = pp.ProviderID
-		
-		LEFT JOIN dim.Practices p
-		    ON p.PracticeID = ISNULL(mpp.PracticeID, v.Practice)
-		
-		WHERE v.Claim_Count IS NOT NULL
-		  AND v.Month >= @StartDate
-		  AND v.Month < @EndDate
-		
-		GROUP BY
-		    YEAR(v.Month),
-		    MONTH(v.Month),
-		    FORMAT(v.Month,'MMM-yy'),
-		    p.PracticeID,
-		    ISNULL(pl.ParentProviderID, 'UNKNOWN')
-
-
+		/* Union for Non-Assist Visits THP */
+
+	SELECT
+		 YEAR(v.Month) as FiscalYear
+		,MONTH(v.Month) as FiscalPeriod
+		,FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy') AS FiscalYearPeriod
+		,'Non-Assist Visits' AS ReportSection
+		,'Office Visits' AS ReportGroupLevel1
+		,NULL AS ReportGroupLevel2
+		,NULL AS ReportGroupLevel3
+		,COALESCE(mpp.PracticeID, '0~' + v.Practice) as PracticeID
+		,ISNULL(pl.ParentProviderID, 'UNKNOWN') AS ReportingProviderID
+		,SUM(v.Claim_Count) AS FiscalPeriodValue
+		,GETDATE() AS UpdatedDateTime
+	FROM [HPIDW].[stg].[THPVolumes] v
+	LEFT JOIN dim.Providers pp 
+	    ON UPPER(LTRIM(RTRIM(pp.ProviderSourceID))) = UPPER(LTRIM(RTRIM(v.Provider)))
+	    AND pp.ProviderDataSourceID = 17
+	LEFT JOIN map.vProviderLinking pl 
+	    ON pl.ChildProviderID = pp.ProviderID
+	LEFT JOIN map.PracticeProviders mpp
+	    ON mpp.ProviderID = pp.ProviderID
+	    AND mpp.PracticeProviderIsActive = 1
+	    AND mpp.PracticeID LIKE '0~THP~%'
+	WHERE v.Claim_Count IS NOT NULL 
+	    AND v.Month >= @StartDate
+	    AND v.Month < DATEADD(MONTH, 1, @EndDate)
+	GROUP BY
+	    YEAR(v.Month),
+	    MONTH(v.Month),
+	    FORMAT(DATEFROMPARTS(YEAR(v.Month), MONTH(v.Month), 1), 'MMM-yy'),
+	    COALESCE(mpp.PracticeID, '0~' + v.Practice),
+	    ISNULL(pl.ParentProviderID, 'UNKNOWN')
+
 		) sub
 
 		GROUP BY  

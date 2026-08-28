@@ -76,7 +76,7 @@ CREATE view [hero].[vPractices] as
       ,ss.StartDate as zPracticeSameStoreDate
  ,SameStoreEndDate 
 	  from hero.practicess p
-	  left join  hero.companiess c on p.CompanyID = c.CompanyID
+	  left join  hero.companiess c on p.PracticeCompanyID = c.CompanyID
 	  
 	  left join  hero.specialtiess s on p.PracticeSpecialtyID = s.SpecialtyID
 	  LEFT JOIN SameStoreMap ss 
