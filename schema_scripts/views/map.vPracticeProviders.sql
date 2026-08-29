@@ -47,7 +47,8 @@ SELECT [PracticeProviderID]
 	  ,pr.PracticeName
       ,pp.[ProviderID]
 	  ,p.ProviderDataSourceID
-	  ,pl.ParentProviderID as ParentProviderID
+	  --,pl.ParentProviderID as ParentProviderID
+      ,COALESCE(p.ParentProviderID, pp.ProviderID) as ParentProviderID
 	  ,CONCAT(p.ProviderLastName,', ',p.ProviderFirstName,' ',p.ProviderMiddleInitial) AS ProviderFullName
 	  ,p.ProviderFirstName
 	  ,p.ProviderMiddleInitial
@@ -69,8 +70,8 @@ SELECT [PracticeProviderID]
 	  ,[PracticeProviderDHSType]
 FROM [map].[PracticeProviders] pp 
   left join dim.vProviders p  ON p.ProviderID = pp.ProviderID
-  left join  dim.vPractices pr ON pr.PracticeID = pp.PracticeID
-  left join  map.vProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
+  left join dim.vPractices pr ON pr.PracticeID = pp.PracticeID
+  --left join  map.vProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
   where 1=1  and
 EXISTS (
     SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 0

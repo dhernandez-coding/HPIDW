@@ -52,7 +52,13 @@ from OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
 left join dim.vPayers p on p.PayerID = CONCAT('5~', r.PAYOR_ID)
 GROUP BY r.HSP_ACCOUNT_ID
 
-)
+),
+DischargeCode as  (SELECT DISCH_DISP_C as DischargeCode, NAME as DischargeName
+FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
+    SELECT DISCH_DISP_C, NAME, TITLE, ABBR
+    FROM CLARITY.ORGFILTER.ZC_DISCH_DISP
+
+'))
 
 
 SELECT
@@ -109,6 +115,7 @@ SELECT
     vc.VisitCaseWeight AS PatientWeight,
     vc.VisitCaseHeight AS PatientHeight,
     vc.VisitCaseBMI AS PatientBMI,
+    dc.DischargeName,
 	a.AccountBeneficiaryNumber as PrimarySubscriberNumber,
 	CASE WHEN sp.SecondaryPayor is not null then sp.SecondaryPayor else NULL end as SecondaryPayor,
 	CASE WHEN sp.SecondarySubscriber is not null then sp.SecondarySubscriber else NULL end as SecondarySubscriberNumber,
@@ -127,6 +134,7 @@ LEFT JOIN dim.Rooms r ON r.RoomID = vc.VisitCaseRoomID
 LEFT JOIN dim.Locations l ON l.LocationID = vc.VisitCaseLocationID
 LEFT JOIN AggDiagnosis ad on ad.VisitDiagnosisVisitID = vc.VisitCaseVisitID
 LEFT JOIN  SecondaryProviders sp on sp.AccountID = a.AccountID
+LEFT JOIN DischargeCode dc on dc.DischargeCode = vc.VisitCaseDischargeDisposition
 
 
 WHERE 1=1 
@@ -177,7 +185,8 @@ GROUP BY
 	a.AccountBeneficiaryNumber,
 	sp.SecondaryPayor,
 	sp.SecondarySubscriber,
-	vc.VisitCaseCSN
+	vc.VisitCaseCSN,
+    dc.DischargeName
 
 
 

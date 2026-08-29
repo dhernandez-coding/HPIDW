@@ -201,35 +201,5 @@ select * from hpiapp.dbo.Practices p where p.practicename like '%Harris%'
 --select * from map.vPracticeDepartments pd where pd.practiceid = '0~CDH' --pd.DepartmentID in ('5~42501023001')
 --select * from dim.departments d where d.DepartmentName like '%HUME%'
 
---select * from HPIApp.dbo.Practices p where p.PracticeName like '%Nevinson%'
-
-
-/* Possible INSERT clauses for map.PracticeDepartments for APM 8/27/26
--- TPG Main Clinics & Solo Practices
-INSERT INTO map.PracticeDepartments SELECT '0~BEB',   '1~1',   '1/1/2020', '12/31/2099', 1, GETDATE() -- Barney Blue, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~WSB',   '1~3',   '1/1/2020', '12/31/2099', 1, GETDATE() -- William Bevers, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~GPK',   '1~4',   '1/1/2020', '12/31/2099', 1, GETDATE() -- Gregory Kelley, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~RSU',   '1~6',   '1/1/2020', '12/31/2099', 1, GETDATE() -- Robert Unsell, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~DDR',   '1~8',   '1/1/2020', '12/31/2099', 1, GETDATE() -- Darryl Robinson, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~AKM',   '1~9',   '1/1/2020', '12/31/2099', 1, GETDATE() -- Angela Morgan, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~EMK',   '1~10',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Edwin King, M.D. (Fountain Park)
-INSERT INTO map.PracticeDepartments SELECT '0~EMK',   '1~25',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Edwin King, M.D. (Fountain Park)
-INSERT INTO map.PracticeDepartments SELECT '0~TAK',   '1~16',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Todd Krehbiel, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~TDT',   '1~31',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Trey Thomason, D.O.
-INSERT INTO map.PracticeDepartments SELECT '0~RMH',   '1~39',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Rita Hancock, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~NBN',   '1~42',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Ngoc Bao Nguyen, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~LCS',   '1~44',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Lance Smith, M.D.
-INSERT INTO map.PracticeDepartments SELECT '0~LBB',   '1~45',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Laura Buford, M.D.
--- Customer / Partner Clinics (DataSource 12)
-INSERT INTO map.PracticeDepartments SELECT '0~IFMB',  '12~101', '1/1/2020', '12/31/2099', 1, GETDATE() -- Integris Binger
-INSERT INTO map.PracticeDepartments SELECT '0~IFMH',  '12~100', '1/1/2020', '12/31/2099', 1, GETDATE() -- Integris Hinton
-INSERT INTO map.PracticeDepartments SELECT '0~IFMH',  '12~125', '1/1/2020', '12/31/2099', 1, GETDATE() -- Integris Hinton
-INSERT INTO map.PracticeDepartments SELECT '0~IFMH2', '12~102', '1/1/2020', '12/31/2099', 1, GETDATE() -- Integris Hydro
-INSERT INTO map.PracticeDepartments SELECT '0~IFMH2', '12~124', '1/1/2020', '12/31/2099', 1, GETDATE() -- Integris Hydro
-INSERT INTO map.PracticeDepartments SELECT '0~CHC',   '12~87',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Community Health Center RHC
-INSERT INTO map.PracticeDepartments SELECT '0~CHC',   '12~94',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Community Health Center ER
-INSERT INTO map.PracticeDepartments SELECT '0~CHC',   '12~95',  '1/1/2020', '12/31/2099', 1, GETDATE() -- Community Health Center Hosp
-INSERT INTO map.PracticeDepartments SELECT '0~SCS',   '12~109', '1/1/2020', '12/31/2099', 1, GETDATE() -- Shadid Choctaw
-
-*/
+--select * from HPIApp.dbo.Practices p where p.PracticeName like '%Nevinson%'
 GO
