@@ -27,7 +27,8 @@ select pp.Id as PracticeProviderID
       ,[PracticeProviderGLType]
       ,[PracticeProviderGLTypeID]
       ,[PracticeProviderGLProviderID]
-      ,[PracticeProviderDHSType] from hero.PracticeProviderss pp
+      ,[PracticeProviderDHSType] 
+from hero.PracticeProviderss pp
 	  left join hero.PRacticess p on pp.PracticeID = p.PracticeID 
 	  left join hero.Providerss pr on pp.ProviderID = pr.ProviderID
 	  left join hero.ProviderAliases pa on pr.PRoviderID = pa.Id
@@ -49,7 +50,7 @@ SELECT [PracticeProviderID]
 	  ,p.ProviderDataSourceID
 	  --,pl.ParentProviderID as ParentProviderID
       ,COALESCE(p.ParentProviderID, pp.ProviderID) as ParentProviderID
-	  ,CONCAT(p.ProviderLastName,', ',p.ProviderFirstName,' ',p.ProviderMiddleInitial) AS ProviderFullName
+	  ,COALESCE(p.ProviderFullName,CONCAT(p.ProviderLastName,', ',p.ProviderFirstName,' ',p.ProviderMiddleInitial)) AS ProviderFullName
 	  ,p.ProviderFirstName
 	  ,p.ProviderMiddleInitial
 	  ,p.ProviderLastName
@@ -68,7 +69,7 @@ SELECT [PracticeProviderID]
       ,[PracticeProviderGLTypeID]
       ,[PracticeProviderGLProviderID]
 	  ,[PracticeProviderDHSType]
-FROM [map].[PracticeProviders] pp 
+FROM [map].[PracticeProviders_PREHERO] pp 
   left join dim.vProviders p  ON p.ProviderID = pp.ProviderID
   left join dim.vPractices pr ON pr.PracticeID = pp.PracticeID
   --left join  map.vProviderLinking pl ON pl.ChildProviderID = pp.ProviderID

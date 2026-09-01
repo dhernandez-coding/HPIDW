@@ -45,9 +45,9 @@ SELECT
 	,p.[ProviderAbbreviation]
 	,CASE WHEN p2.ProviderLastName IS NOT NULL THEN CONCAT(p2.ProviderLastName,', ',p2.ProviderFirstName,' ', p2.ProviderMiddleInitial)
 		  ELSE CONCAT(p.ProviderLastName,', ',p.ProviderFirstName,' ', p.ProviderMiddleInitial) END as ProviderFullName
-	,p2.[ProviderFirstName]
-	,p2.[ProviderMiddleInitial]
-	,p.[ProviderLastName]
+	,COALESCE(p2.[ProviderFirstName],p.[ProviderFirstName]) AS ProviderFirstName
+	,COALESCE(p2.[ProviderMiddleInitial],p.[ProviderMiddleInitial]) as ProviderMiddleInitial
+	,COALESCE(p2.[ProviderLastName],p.ProviderLastName) as ProviderLastName
 	,p.[ProviderGender]
 	,p.[ProviderSuffix]
 	,p.[ProviderStreetAddress1]

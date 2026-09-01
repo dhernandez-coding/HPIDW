@@ -9,9 +9,9 @@ CREATE   PROCEDURE [stg].[spAPMCustomersReloadDimProvidersFull] AS
 BEGIN
 SET NOCOUNT ON;
 
-delete from dim.vProviders where ProviderDataSourceID = 12
+delete from dim.Providers where ProviderDataSourceID = 12
 
-insert into dim.vProviders
+insert into dim.Providers
 (
 	ProviderID,
 	ProviderDataSourceID,
@@ -65,7 +65,7 @@ from tievmdb03.Ntier_HPI_Customers.PM.Practitioners p
 --left join tievmdb03.Ntier_627200.PM.Specialties s on p.Specialty_ID = s.Specialty_ID
 --left join map.ProviderAssignments pa on '1' + '~' + cast(p.Practitioner_ID as varchar(50)) = pa.ProviderAssignmentProviderID
 where 1=1
-	and p.last_name like '%alvis%'
+	--and p.last_name like '%alvis%'
 	AND P.Practitioner_Id IN ('92811','47056','95823','98834','98968','47022','99110','99114','98834') --I added 15352 for including Alvis but no 100% sure if thats the record we should pull from this table. MAybe 99143
 
 END
