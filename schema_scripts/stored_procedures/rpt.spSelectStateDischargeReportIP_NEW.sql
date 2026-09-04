@@ -4,7 +4,7 @@ CREATE PROCEDURE [rpt].[spSelectStateDischargeReportIP_NEW]
  @startdate datetime = null,
  @enddate datetime = null,
  @Location int = 43004001 --HPI CHN
- 	--43005005 --HPI CHS
+  	--43005005 --HPI CHS
 	--43006001 --HPI NWSH
 
 AS BEGIN
