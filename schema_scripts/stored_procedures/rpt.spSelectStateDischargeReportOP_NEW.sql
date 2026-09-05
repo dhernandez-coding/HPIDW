@@ -11,6 +11,8 @@ AS BEGIN
 
 SET NOCOUNT ON;
 
+--DECLARE @startdate datetime = '2026-07-01'
+--DECLARE @enddate datetime = '2026-07-31'
 SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
 SET @enddate   = IsNull(@enddate,   DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
 
@@ -548,8 +550,10 @@ DECLARE @Dt XML=
 			from #TEMPTransactions procs
 
 			where acct.hsp_account_id=procs.HSP_ACCOUNT_ID
-					and procs.UB_REV_CODE_ID = 360
-					and procs.CPT_CODE <> 'EDNOCHG'
+				and LEFT(CONVERT(varchar(10), procs.UB_REV_CODE_ID), 2) IN ('36','48','49','75','76')
+				and procs.CPT_CODE <> 'EDNOCHG'
+					--and procs.UB_REV_CODE_ID = 450
+					--and procs.CPT_CODE <> 'EDNOCHG'
 			group by
 			procs.CPT_CODE,procs.SERVICE_DATE
 
