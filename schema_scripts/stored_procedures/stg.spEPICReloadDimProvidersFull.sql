@@ -10,7 +10,7 @@
 CREATE   PROCEDURE [stg].[spEPICReloadDimProvidersFull] AS
 
 BEGIN
-SET NOCOUNT ON;
+SET NOCOUNT OFF;
 
 
 

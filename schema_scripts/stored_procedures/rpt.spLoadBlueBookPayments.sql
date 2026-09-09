@@ -237,7 +237,7 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 						FROM rpt.BlueBooks bb
 						WHERE bb.ReportSection in ('Payments') and bb.ReportGroupLevel1 is not null
 						GROUP BY bb.ReportSection, bb.ReportGroupLevel1) bbg
-		where p.PracticeIsActive = 1
+		where p.PracticeIsActive = 1 AND p.PracticeCompany not in ('EXTERNAL','CH','UNK')
 
 		UNION ALL
 

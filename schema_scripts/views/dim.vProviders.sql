@@ -2,38 +2,38 @@ CREATE view [dim].[vProviders]
 
 as
 --with schemabinding  as
-SELECT [ProviderID]
-      ,[ParentProviderID]
-      ,[ProviderDataSourceID]
-      ,[ProviderDataSource]
-      ,[ProviderSourceID]
-      ,[ProviderAbbreviation]
-      ,[ProviderFullName]
-      ,[ProviderFirstName]
-      ,[ProviderMiddleInitial]
-      ,[ProviderLastName]
-      ,[ProviderGender]
-      ,[ProviderSuffix]
-      ,[ProviderStreetAddress1]
-      ,[ProviderStreetAddress2]
-      ,[ProviderCity]
-      ,[ProviderState]
-      ,[ProviderZipCode]
-      ,[ProviderPhone]
-      ,[ProviderFax]
-      ,[ProviderSpecialtyID]
-      ,[ParentSpecialtyID]
-      ,[ParentSpecialtyName]
-      ,[ProviderUPIN]
-      ,[ProviderNPI]
-      ,[ProviderIsActive]
-      ,[ProviderUpdatedDateTime]
-FROM hero._vProviders
-WHERE EXISTS (
-    SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 1
-)
+--SELECT [ProviderID]
+--      ,[ParentProviderID]
+--      ,[ProviderDataSourceID]
+--      ,[ProviderDataSource]
+--      ,[ProviderSourceID]
+--      ,[ProviderAbbreviation]
+--      ,[ProviderFullName]
+--      ,[ProviderFirstName]
+--      ,[ProviderMiddleInitial]
+--      ,[ProviderLastName]
+--      ,[ProviderGender]
+--      ,[ProviderSuffix]
+--      ,[ProviderStreetAddress1]
+--      ,[ProviderStreetAddress2]
+--      ,[ProviderCity]
+--      ,[ProviderState]
+--      ,[ProviderZipCode]
+--      ,[ProviderPhone]
+--      ,[ProviderFax]
+--      ,[ProviderSpecialtyID]
+--      ,[ParentSpecialtyID]
+--      ,[ParentSpecialtyName]
+--      ,[ProviderUPIN]
+--      ,[ProviderNPI]
+--      ,[ProviderIsActive]
+--      ,[ProviderUpdatedDateTime]
+--FROM hero._vProviders
+--WHERE EXISTS (
+--    SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 1
+--)
 
-UNION ALL
+--UNION ALL
 
 
 SELECT

@@ -3,8 +3,8 @@ CREATE PROCEDURE [dbo].[spCreateReloadTableProcedureINCREMENTALTemplate] as
 SET NOCOUNT ON
 
 DECLARE @Database varchar(10) = 'HPIDW' --Input target Database
-DECLARE @Schema varchar(10) = 'dim' --Input target Schema
-DECLARE @Table varchar(30) = 'Practices' --Input target table
+DECLARE @Schema varchar(10) = 'map' --Input target Schema
+DECLARE @Table varchar(30) = 'ProviderLinking' --Input target table
 DECLARE @DatasourceID int = 0 -- Input target DatasourceID from dim.Datasources
 DECLARE @DatasourceName varchar(100) = (SELECT TOP 1 DatasourceName FROM dim.Datasources WHERE DatasourceID = @DatasourceID)
 DECLARE @PrimaryKeyDelimeter varchar(1) = '~' --'~'

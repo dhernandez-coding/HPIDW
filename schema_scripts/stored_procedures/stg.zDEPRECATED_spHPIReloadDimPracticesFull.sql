@@ -596,8 +596,10 @@ INSERT INTO dim.Practices SELECT '0~MRH',0,'MRH','Michael R. Harvey, M.D.','MRH'
 /*Updated 8/3/2026 - Changed Dr. Hume's HPIP PracticeSourceID from 'CSH' to 'HPIPCSH' to allow Great Plains to map to the TPG practice cleanly in stg.vGlAccounts*/
 UPDATE dim.Practices SET PracticeSourceID = 'HPIPCSH', PracticeUpdatedDatetime = getdate() WHERE PracticeID = '0~CSH'
 
+/*Added 9/8/2026 - Jeremy Marx, M.D. */
+INSERT INTO dim.Practices SELECT '0~JSM',0,'JSM','Jeremy Marx, M.D.','JSM','EPIC','HPIP',1,0,GETDATE(),NULL,NULL,NULL,'Ortho',NULL
 
-select * from dim.Practices p where p.practiceid LIKE '0~CSH%'
+select * from dim.Practices p where p.practiceid LIKE '0~JSM%'
 select * from dim.Practices p where p.PracticeGLLocationID = '36'
 */
 GO

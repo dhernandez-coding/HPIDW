@@ -171,14 +171,17 @@ insert into map.PracticeDepartments select '0~ELB','5~42501049001','1/1/2021','1
 7/31/2026 - Added new departments for Michael R. Harvey
 insert into map.PracticeDepartments select '0~MRH','5~42501048001','1/1/2021','12/31/2099',1,getdate(),NULL
 
+9/8/2026 - Added new departments for Jeremy Marx
+insert into map.PracticeDepartments select '0~JSM','5~430001200101','1/1/2021','12/31/2099',1,getdate(),NULL
 
 
---select * from dim.departments d where d.DepartmentName like '%harvey%'
+
+--select * from dim.departments d where d.DepartmentName like '%marx%'
 
 select * from dim.vPractices p where p.practicename like '%maitino%'
 SELECT * FROM map.vPracticeDepartments where practiceid = '0~CSH2'
 SELECT * FROM map.vPracticeDepartments where practiceid = '0~ELB'
-SELECT * FROM map.vPracticeDepartments where practiceid = '0~MRH'
+SELECT * FROM map.vPracticeDepartments where practiceid = '0~JSM'
 
 SELECT * FROM map.vPracticeProviders where practiceid = '0~PDM'
 SELECT * FROM map.vPracticeProviders where practiceid = '0~rfh'
