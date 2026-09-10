@@ -1,4 +1,4 @@
-CREATE TABLE [dim].[Providers_PREHERO] (
+CREATE TABLE [dim].[zzDEPRECATD_Providers_PREHERO] (
     [ProviderID] VARCHAR(50) NOT NULL,
     [ProviderDataSourceID] INT NOT NULL,
     [ProviderSourceID] VARCHAR(50) NOT NULL,

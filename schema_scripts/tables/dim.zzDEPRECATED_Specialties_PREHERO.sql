@@ -1,4 +1,4 @@
-CREATE TABLE [dim].[Specialties_PREHERO] (
+CREATE TABLE [dim].[zzDEPRECATED_Specialties_PREHERO] (
     [SpecialtyID] VARCHAR(50) NOT NULL,
     [SpecialtyDataSourceID] INT NULL,
     [SpecialtySourceID] VARCHAR(50) NULL,

@@ -67,15 +67,15 @@ SELECT
 	,p.[ProviderUpdatedDateTime]
 FROM [dim].[Providers] p
 	left join [dim].[DataSources] ds ON ds.DataSourceID = p.ProviderDataSourceID
-	left join map.vProviderLinking pl on p.ProviderID = pl.ChildProviderID
+	left join map.ProviderLinking pl on p.ProviderID = pl.ChildProviderID
 	left join dim.Providers p2 on pl.ParentProviderID = p2.ProviderID
 	left join dim.Specialties s ON s.SpecialtyID = coalesce(p2.ProviderSpecialtyID, p.[ProviderSpecialtyID])
 	--left join (select a.AccountAttendingProviderID 
 	--			from fact.Accounts a 
 	--			where year(AccountDateOfService) >= (year(getdate()) - 4) 
 	--			group by a.AccountAttendingProviderID) pa ON pa.AccountAttendingProviderID = p.ProviderID
-where 1=1 and
-EXISTS (
-    SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 0
-)
+where 1=1 --and
+--EXISTS (
+--    SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 0
+--)
 GO

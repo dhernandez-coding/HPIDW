@@ -7,6 +7,7 @@ CREATE TABLE [dim].[Specialties] (
     [SpecialtyDescription] VARCHAR(200) NULL,
     [SpecialtyIsActive] BIT NULL,
     [SpecialtyCoPayApplies] BIT NULL,
-    [SpecialtyUpdatedDateTime] DATETIME NULL
+    [SpecialtyUpdatedDateTime] DATETIME NULL,
+    CONSTRAINT [PK_dim_Specialties] PRIMARY KEY ([SpecialtyID])
 );
 GO

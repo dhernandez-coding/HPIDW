@@ -65,6 +65,30 @@ BEGIN
 	FROM HPIAPP.dbo.Practices p
 		left join HPIApp.dbo.Companies c ON c.CompanyID = p.PracticeCompanyId
 	WHERE 1=1
+
+	UNION ALL 
+
+	select 
+		p.PracticeID
+		,0
+		,p.PracticeID
+		,p.PracticeName
+		,PracticeAbbreviation
+		,PracticeDataSource
+		,PracticeCompany
+		,PracticeGLLocationID
+		,PracticeGLLocation
+		,PracticeGLPracticeID
+		,PracticeSpecialty
+		,PracticeIsSameStore
+		,PracticeIsActive
+		,PracticeUpdatedDatetime
+	from dim.practices p 
+		--left join HPIAPP.dbo.Practices pa ON pa.PracticeSourceID = p.PracticeSourceID
+	where 1=1 
+		--AND pa.PracticeID is null
+		AND len(P.PracticeSourceID) < 6
+		AND p.PracticeID in ('0~JMA','0~JSM','0~ELB','0~MRH') /*Practices added after PowerApp was deprecated*/
 		
 
 IF (SELECT COUNT(1) FROM @StagingTable) >= 10 

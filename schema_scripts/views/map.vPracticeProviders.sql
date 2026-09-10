@@ -2,7 +2,7 @@ CREATE View [map].[vPracticeProviders]
 as
 --WITH SCHEMABINDING
 --as
-
+/*
 select pp.Id as PracticeProviderID
       ,p.[PracticePracticeID] as PracticeID
       ,p.[PracticeName]
@@ -38,10 +38,7 @@ WHERE EXISTS (
 )
 
 UNION ALL
-
-
-
-
+*/
 
 SELECT [PracticeProviderID]
       ,pp.[PracticeID]
@@ -69,12 +66,9 @@ SELECT [PracticeProviderID]
       ,[PracticeProviderGLTypeID]
       ,[PracticeProviderGLProviderID]
 	  ,[PracticeProviderDHSType]
-FROM [map].[PracticeProviders_PREHERO] pp 
+FROM [map].[PracticeProviders] pp 
   left join dim.vProviders p  ON p.ProviderID = pp.ProviderID
   left join dim.vPractices pr ON pr.PracticeID = pp.PracticeID
   --left join  map.vProviderLinking pl ON pl.ChildProviderID = pp.ProviderID
-  where 1=1  and
-EXISTS (
-    SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 0
-)
+where 1=1
 GO

@@ -14,7 +14,7 @@ g.Year1 as GLYear
 ,GETDATE() as AsOfDatetime
 from CORVMAP22.TPG.dbo.GL11110 g  --GL
 	left join CORVMAP22.TPG.dbo.GL40200 s4 ON s4.SGMNTID = g.ACTNUMBR_4 AND s4.SGMTNUMB = 4
-	left join stg.vGLAccounts a ON a.GLAccountSourceID = g.ACTINDX
+	left join stg.vGLAccounts a ON a.GLAccountSourceID = convert(varchar,g.ACTINDX)
 where 1=1
 	and g.ACCTTYPE = 1
 	--and (g.YEAR1 < @CurrentYear --(select min(YEAR1) from GL11110)

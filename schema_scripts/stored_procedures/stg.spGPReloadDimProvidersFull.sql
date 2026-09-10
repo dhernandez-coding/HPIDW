@@ -232,7 +232,7 @@ INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,Prov
 INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~LBB',10,'LBB','LBB','LAURA B. BUFORD',1,getdate(),'1861803058'
 
 /*9.12.2025 Create record for Chelsea M. Rommell*/
-INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~CMR',10,'CMR','CMR','CHELSEA M. ROMMELL',1,getdate(),'19326292684'
+INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~CMR',10,'CMR','CMR','CHELSEA M. ROMMELL',1,getdate(),'1932629268'
 
 /*9.12.2025 Create record for Charley C. Baldwin*/
 INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~CCB',10,'CCB','CCB','CHARLEY C. BALDWIN',1,getdate(),'1437830353'
@@ -253,7 +253,7 @@ INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,Prov
 INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~AAM',10,'AAM','AAM','ASHLEY A. MARTIN',1,getdate(),'1710855515'
 
 /*03.31.2026 Create record for Maria Nguyen*/
-INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~MN',10,'MN','MN','MARIA NGUYEN',1,getdate(),'1115922895'
+INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~MN',10,'MN','MN','MARIA NGUYEN',1,getdate(),'1114922895'
 
 /*04.30.2026 Create record for Thilly R. Nelson*/
 INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~TRN',10,'TRN','TRN','THILLY R. NELSON',1,getdate(),'1487444766'

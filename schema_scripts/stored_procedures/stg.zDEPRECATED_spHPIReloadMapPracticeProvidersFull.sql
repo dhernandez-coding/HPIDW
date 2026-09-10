@@ -871,15 +871,20 @@ INSERT INTO map.PracticeProviders SELECT '0~MRH','5~137443','MRH',1,'7/29/2026',
 UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~ACC' and ProviderID = '1~19830'
 UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = 0.5, PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~ACC' and ProviderID in ('1~13939','5~P1040276')
 
+/*9.8.26 Added Jeremy Marx to JSM*/
+INSERT INTO map.PracticeProviders SELECT '0~JSM','5~152022','JSM',1,'8/1/2026','12/31/2099',1,getdate(),1,1,null,1,0,NULL,NULL,NULL,NULL
+
+/*9.9.26 - Per Michael - Updates to DDR - Remove Anna Heinz from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~DDR' and ProviderID = '1~20392'
 
 
 
-	select * from map.vPracticeProviders p where p.PracticeID like '0~ACC%'
+	select * from map.vPracticeProviders p where p.PracticeID like '0~DDR%'
 	
-	select * from map.vPracticeProviders p where p.ProviderFullName like '%PAPE%'
-	select * from dim.Practices p where p.PracticeName like '%balzer%'
+	select * from map.vPracticeProviders p where p.ProviderFullName like '%MARX%'
+	select * from dim.Practices p where p.PracticeName like '%MARX%'
 	
-select * from dim.vProviders p where p.ProviderFullName like '%balzer, e%'
+select * from dim.vProviders p where p.ProviderFullName like '%MARX, J%'
 
 	select * from dim.vProviders p where p.providerdatasourceid = 10 and providerfullname like '%Nguyen%' order by Providerupdateddatetime
 

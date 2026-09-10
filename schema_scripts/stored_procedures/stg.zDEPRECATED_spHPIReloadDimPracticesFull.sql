@@ -599,6 +599,9 @@ UPDATE dim.Practices SET PracticeSourceID = 'HPIPCSH', PracticeUpdatedDatetime =
 /*Added 9/8/2026 - Jeremy Marx, M.D. */
 INSERT INTO dim.Practices SELECT '0~JSM',0,'JSM','Jeremy Marx, M.D.','JSM','EPIC','HPIP',1,0,GETDATE(),NULL,NULL,NULL,'Ortho',NULL
 
+/*Added 9/9/2026 - KASSI D STOCKERT */
+INSERT INTO dim.Practices SELECT '0~THP~KDS',0,'THP~KDS','KASSI D STOCKERT, M.D.','THP~KDS','THP VolumeExport','THP',1,0,GETDATE(),NULL,NULL,NULL,NULL,NULL
+
 select * from dim.Practices p where p.practiceid LIKE '0~JSM%'
 select * from dim.Practices p where p.PracticeGLLocationID = '36'
 */

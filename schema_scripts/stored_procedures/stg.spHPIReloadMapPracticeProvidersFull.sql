@@ -61,28 +61,27 @@ BEGIN
 	)
 
 	SELECT
-	CONCAT('0~',PracticeID,'~',pp.ProviderID) AS PracticeProviderID
-	,CONCAT('0~',PracticeID) AS PracticeID
-	,p.ProviderProviderID AS ProviderID
-	,PracticeProviderIsDefaultPractice
-	,PracticeProviderIsDefaultReferralPractice
-	,PracticeProviderIsPrimary
-	,PracticeProviderIsSpecialist
-	,PracticeProviderIsMidLevel
-	,PracticeProviderIsReferralTarget
-	,PracticeProviderIsAffiliate
-	,PracticeProviderEffectiveDate
-	,PracticeProviderEndDate
-	,PracticeProviderFTE
-	,PracticeProviderAllocationPercent
-	,PracticeProviderLocation
-	,PracticeProviderGLType
-	,PracticeProviderGLTypeID
-	,PracticeProviderGLProviderID
-	,PracticeProviderDHSType
-	,PracticeProviderIsActive
-	,PracticeProviderUpdatedDatetime
-	
+		CONCAT('0~',PracticeID,'~',pp.ProviderID) AS PracticeProviderID
+		,CONCAT('0~',PracticeID) AS PracticeID
+		,p.ProviderProviderID AS ProviderID
+		,PracticeProviderIsDefaultPractice
+		,PracticeProviderIsDefaultReferralPractice
+		,PracticeProviderIsPrimary
+		,PracticeProviderIsSpecialist
+		,PracticeProviderIsMidLevel
+		,PracticeProviderIsReferralTarget
+		,PracticeProviderIsAffiliate
+		,PracticeProviderEffectiveDate
+		,PracticeProviderEndDate
+		,PracticeProviderFTE
+		,PracticeProviderAllocationPercent
+		,PracticeProviderLocation
+		,PracticeProviderGLType
+		,PracticeProviderGLTypeID
+		,PracticeProviderGLProviderID
+		,PracticeProviderDHSType
+		,PracticeProviderIsActive
+		,PracticeProviderUpdatedDatetime
 	FROM HPIApp.dbo.PracticeProviders pp
 		LEFT JOIN HPIApp.dbo.Providers p ON p.ProviderID = pp.ProviderID
 	WHERE 1=1
@@ -90,6 +89,40 @@ BEGIN
 		AND pp.ProviderID is not null
 		and pp.PracticeProviderIsActive = 1
 		
+	UNION ALL 
+
+	SELECT
+		CONCAT('0~',PracticeID,'~',pp.ProviderID) AS PracticeProviderID
+		,CONCAT('0~',PracticeID) AS PracticeID
+		,mp.ProviderID AS ProviderID
+		,1 as PracticeProviderIsDefaultPractice
+		,1 as PracticeProviderIsDefaultReferralPractice
+		,PracticeProviderIsPrimary
+		,PracticeProviderIsSpecialist
+		,PracticeProviderIsMidLevel
+		,0 as PracticeProviderIsReferralTarget
+		,1 as PracticeProviderIsAffiliate
+		,PracticeProviderEffectiveDate
+		,PracticeProviderEndDate
+		,PracticeProviderFTE
+		,PracticeProviderAllocationPercent
+		,PracticeProviderLocation
+		,PracticeProviderGLType
+		,PracticeProviderGLTypeID
+		,PracticeProviderGLProviderID
+		,PracticeProviderDHSType
+		,PracticeProviderIsActive
+		,PracticeProviderUpdatedDatetime
+	FROM map.PracticeProviders pp
+		LEFT JOIN dim.Providers p ON p.ProviderID = pp.ProviderID
+		LEFT JOIN map.ProviderLinking pl ON pl.ChildProviderID = p.ProviderID
+		LEFT JOIN dim.Providers mp ON mp.ProviderID = pl.ParentProviderID
+	WHERE 1=1
+		AND pp.PracticeID is not null
+		AND pp.ProviderID is not null
+		AND mp.ProviderID is not null
+		and pp.PracticeProviderIsActive = 1
+		AND pp.PracticeID in ('0~JMA','0~JSM','0~ELB','0~MRH')
 
 IF (SELECT COUNT(1) FROM @StagingTable) >= 10 
 	BEGIN 

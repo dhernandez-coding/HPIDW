@@ -22,7 +22,7 @@ as
       ,[ProviderLinkingCreatedDatetime]
       ,[ProviderLinkingUpdatedDatetime]
       ,[ProviderLinkingIsActive] 
-  from map.ProviderLinking_PREHERO 
+  from map.ProviderLinking
   where 1=1 
   
 --AND EXISTS (

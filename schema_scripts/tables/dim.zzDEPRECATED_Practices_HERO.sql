@@ -1,4 +1,4 @@
-CREATE TABLE [dim].[Practices_PREHERO] (
+CREATE TABLE [dim].[zzDEPRECATED_Practices_HERO] (
     [PracticeID] VARCHAR(100) NOT NULL,
     [PracticeDataSourceID] INT NULL,
     [PracticeSourceID] VARCHAR(100) NULL,
@@ -12,8 +12,7 @@ CREATE TABLE [dim].[Practices_PREHERO] (
     [PracticeGLLocationID] VARCHAR(10) NULL,
     [PracticeGLLocation] VARCHAR(50) NULL,
     [PracticeGLPracticeID] VARCHAR(10) NULL,
-    [PracticeSpecialty] VARCHAR(10) NULL,
-    [PracticeSameStoreDate] DATE NULL,
-    CONSTRAINT [PK__Practice__352A161230D0E8CA] PRIMARY KEY ([PracticeID])
+    [PracticeSpecialty] VARCHAR(30) NULL,
+    [PracticeSameStoreDate] DATE NULL
 );
 GO

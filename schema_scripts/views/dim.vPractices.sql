@@ -46,7 +46,7 @@ CREATE VIEW [dim].[vPractices]
 
  /*THIS IS THE NEW LOGIC*/
 
- 
+/* --Chris Cross ignored as of 9/8/2026
 
   select 
   [PracticePracticeID] as PracticeID
@@ -88,7 +88,7 @@ CREATE VIEW [dim].[vPractices]
 
 UNION ALL
 
-
+*/
 
  --WITH SameStore as (
 
@@ -177,8 +177,10 @@ UNION ALL
 FROM [dim].[Practices] p
 LEFT JOIN SameStoreMap ss 
     ON ss.PracticeID = p.PracticeID
-WHERE 1=1 and
+WHERE 1=1 
+/*
+and
 EXISTS (
     SELECT 1 FROM dbo.DWConfig WHERE Name = 'UseAppTables' AND [Value] = 0
-)
+)*/
 GO
