@@ -1,160 +1,6 @@
 CREATE PROCEDURE [stg].[zDEPRECATED_spHPIReloadMapPracticeProvidersFull] AS
 
-/*
--------------------------------------------------------------------------------------------------------
--- Step 1: Enter relevant provider data, when updating leave unchanged fields as NULL
--------------------------------------------------------------------------------------------------------
 
-DECLARE @DataSourceID [tinyint]							= NULL									-- 0: HPIDW, 1: AllScripts, 5: EPIC
-DECLARE @PracticeID [varchar](100)						= 'ZZZ'									-- Enter Practice ID with this format
-DECLARE @ProviderID [varchar](100) 						= '0000000'								-- Enter Provider ID with this format. Used to find record to alter when updating existing records.
-DECLARE @ProviderAbbreviation [varchar] (100)			= 'ZZZ'									-- Enter Provider Abbreviation with this format
-DECLARE @ProviderIsPrimary [bit] 						= NULL									-- 1: Primary practicioner, 0: midlevel
-DECLARE @ProviderEffectiveDate [date] 					= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0)	-- Set to first day of current month for new providers. Not used in updating current providers.
-DECLARE @ProviderEndDate [date] 						= '12-31-2099'							-- Do not alter unless decomissioning provider
-DECLARE @ProviderIsActive [bit] 						= 1										-- Set to 1 unless decomissioning provider
-DECLARE @ProviderUpdatedDatetime [datetime] 			= GETDATE()								-- DO NOT ALTER!
-DECLARE @ProviderFTE [decimal](18, 2)					= NULL									-- 0 to 1 decimal scalar of full time employment percentage
-DECLARE @ProviderAllocationPercent [decimal](18, 8) 	= NULL									-- 0 to 1 decimal scalar of expense allocation percentage
-DECLARE @ProviderLocation [varchar](50) 				= NULL									-- Provider Location ID
-DECLARE @ProviderIsSpecialist [bit] 					= NULL									-- Provider Specialty
-DECLARE @ProviderIsMidLevel [bit] 						= ABS(@ProviderIsPrimary - 1)			-- DO NOT ALTER!
-DECLARE @ProviderGLType [varchar](30) 					= NULL 
-DECLARE @ProviderGLTypeID [varchar](30) 				= NULL
-DECLARE @ProviderGLProviderID [varchar](10) 			= NULL
-DECLARE @ProviderDHSType [int] 							= NULL
-
--------------------------------------------------------------------------------------------------------
--- Step 2: Choose insert or update action
--------------------------------------------------------------------------------------------------------
-
-DECLARE @ActionType tinyint								= 0										-- 1: Insert new record, 2: Update existing Record
-
--------------------------------------------------------------------------------------------------------
--- Step 3: Comment out 'ALTER/CREATE PROCEDURE...' at top of this query and then execute ENTIRE page
--------------------------------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------------------------------
--- Step 4: Open the following Power App link to finalize process : https://apps.powerapps.com/play/e/default-c7ae6850-3a33-412b-a092-8bc8d5dc590e/a/360258f5-223c-4be8-a5ee-8798765d74a4?tenantId=c7ae6850-3a33-412b-a092-8bc8d5dc590e&hint=9981fa39-fd27-4ec7-9f37-f17c03bc2e5b&source=sharebutton&sourcetime=1717535895653
--------------------------------------------------------------------------------------------------------
-
-DECLARE @UserComment varchar(800) =
-CASE 
-	WHEN @ActionType = 1
-		THEN 'Creating map for ' + @ProviderAbbreviation + ' provider in ' + @PracticeID + ' practice.'
-	WHEN @ActionType = 2
-		THEN 'Updating map for ' + @ProviderAbbreviation + ' provider in ' + @PracticeID + ' practice.'
-END
-
--- Insert new records into PracticeProviders map
-
-IF @ActionType = 1 AND @PracticeID NOT LIKE '%ZZZ%' AND @ProviderID NOT LIKE '%0000000%' AND @ProviderAbbreviation NOT LIKE '%ZZZ%' AND @DataSourceID IS NOT NULL
-BEGIN
-
-	INSERT INTO map.PracticeProviders (
-		[PracticeID]
-		,[ProviderID]
-		,[ProviderAbbreviation]
-		,[PracticeProviderIsPrimary]
-		,[PracticeProviderEffectiveDate]
-		,[PracticeProviderEndDate]
-		,[PracticeProviderIsActive]
-		,[PracticeProviderUpdatedDatetime]
-		,[PracticeProviderFTE]
-		,[PracticeProviderAllocationPercent]
-		,[PracticeProviderLocation]
-		,[PracticeProviderIsSpecialist]
-		,[PracticeProviderIsMidLevel]
-		,[PracticeProviderGLType]
-		,[PracticeProviderGLTypeID]
-		,[PracticeProviderGLProviderID]
-		,[PracticeProviderDHSType]
-	)
-	SELECT 
-		CONCAT(@DataSourceID , '~', @PracticeID)
-		,CONCAT(@DataSourceID , '~', @ProviderID)
-		,CONCAT('0~',@ProviderAbbreviation)
-		,@ProviderIsPrimary 
-		,@ProviderEffectiveDate
-		,@ProviderEndDate 	
-		,@ProviderIsActive 	
-		,@ProviderUpdatedDatetime
-		,@ProviderFTE
-		,@ProviderAllocationPercent
-		,@ProviderLocation
-		,@ProviderIsSpecialist
-		,@ProviderIsMidLevel
-		,@ProviderGLType
-		,@ProviderGLTypeID
-		,@ProviderGLProviderID
-		,@ProviderDHSType
-
-	-- Insert log entry of new records into MapLog	
-
-	INSERT INTO dbo.MapLog (
-		[MapTable]
-		,[ActionType]
-		,[UpdatedDateTime]
-		,[UserComments]
-		,[CommandString]
-	)
-	SELECT
-		'map.PracticeProviders'
-		,'INSERT'
-		,GETDATE()
-		,@UserComment
-		,CONCAT('CONCAT(',ISNULL(@DataSourceID,'NULL'),' , ''~'', @PracticeID), CONCAT(',ISNULL(@DataSourceID,'NULL'),' , ''~'', ',ISNULL(@ProviderID,'NULL'),')' ,',',ISNULL(@ProviderAbbreviation,'NULL') ,',',ISNULL(@ProviderIsPrimary,'NULL')  ,',',ISNULL(@ProviderEffectiveDate,'NULL') ,',',ISNULL(@ProviderEndDate,'NULL') 	 ,',',ISNULL(@ProviderIsActive,'NULL') 	 ,',',ISNULL(@ProviderUpdatedDatetime,'NULL') ,',',ISNULL(@ProviderFTE,'NULL') ,',',ISNULL(@ProviderAllocationPercent,'NULL') ,',',ISNULL(@ProviderLocation,'NULL') ,',',ISNULL(@ProviderIsSpecialist,'NULL') ,',',ISNULL(@ProviderIsMidLevel,'NULL') ,',',ISNULL(@ProviderGLType,'NULL') ,',',ISNULL(@ProviderGLTypeID,'NULL') ,',',ISNULL(@ProviderGLProviderID,'NULL') ,',',ISNULL(@ProviderDHSType,'NULL'))
-;END
-
--- Update records in PracticeProviders map
-
-IF @ActionType = 2 AND @PracticeID NOT LIKE '%ZZZ%' AND @ProviderID NOT LIKE '%0000000%' AND @ProviderAbbreviation NOT LIKE '%ZZZ%' AND @DataSourceID IS NOT NULL
-BEGIN
-
-	UPDATE  map.PracticeProviders
-	SET
-		[PracticeID] = CONCAT(@DataSourceID, '~', @PracticeID)
-		-- Do not change ProviderID
-		,[ProviderAbbreviation] = CONCAT('0~', @ProviderAbbreviation)
-		,PracticeProviderIsPrimary = CASE WHEN @ProviderIsPrimary IS NOT NULL THEN @ProviderIsPrimary ELSE PracticeProviderIsPrimary END
-		-- Do not change PracticeProviderEffectiveDate
-		,PracticeProviderEndDate = CASE WHEN @ProviderEndDate IS NOT NULL THEN @ProviderEndDate ELSE PracticeProviderEndDate END
-		,PracticeProviderIsActive = CASE WHEN @ProviderIsActive IS NOT NULL THEN @ProviderIsActive ELSE PracticeProviderIsActive END
-		,PracticeProviderUpdatedDatetime = @ProviderUpdatedDatetime -- Always change UpdateDateTime
-		,PracticeProviderFTE = CASE WHEN @ProviderFTE IS NOT NULL THEN @ProviderFTE ELSE PracticeProviderFTE END
-		,PracticeProviderAllocationPercent = CASE WHEN @ProviderAllocationPercent IS NOT NULL THEN @ProviderAllocationPercent ELSE PracticeProviderAllocationPercent END
-		,PracticeProviderLocation = CASE WHEN @ProviderLocation IS NOT NULL THEN @ProviderLocation ELSE PracticeProviderLocation END
-		,PracticeProviderIsSpecialist = CASE WHEN @ProviderIsSpecialist IS NOT NULL THEN @ProviderIsSpecialist ELSE PracticeProviderIsSpecialist END
-		,PracticeProviderIsMidLevel = CASE WHEN @ProviderIsMidLevel IS NOT NULL THEN @ProviderIsMidLevel ELSE PracticeProviderIsMidLevel END
-		,PracticeProviderGLType = CASE WHEN @ProviderGLType IS NOT NULL THEN @ProviderGLType ELSE PracticeProviderGLType END
-		,PracticeProviderGLTypeID = CASE WHEN @ProviderGLTypeID IS NOT NULL THEN @ProviderGLTypeID ELSE PracticeProviderGLTypeID END
-		,PracticeProviderGLProviderID = CASE WHEN @ProviderGLProviderID IS NOT NULL THEN @ProviderGLProviderID ELSE PracticeProviderGLProviderID END
-		,PracticeProviderDHSType = CASE WHEN @ProviderDHSType IS NOT NULL THEN @ProviderDHSType ELSE PracticeProviderDHSType END
-
-	WHERE [ProviderID] = @ProviderID;
-
-	-- Insert log entry of updated records into MapLog
-
-	INSERT INTO dbo.MapLog (
-		[MapTable]
-		,[ActionType]
-		,[UpdatedDateTime]
-		,[UserComments]
-		,[CommandString]
-	)
-	SELECT
-		'map.PracticeProviders'
-		,'UPDATE'
-		,GETDATE()
-		,@UserComment
-		,CONCAT('CONCAT(',ISNULL(@DataSourceID,'NULL'),' , ''~'', @PracticeID), CONCAT(',ISNULL(@DataSourceID,'NULL'),' , ''~'', ',ISNULL(@ProviderID,'NULL'),')' ,',',ISNULL(@ProviderAbbreviation,'NULL') ,',',ISNULL(@ProviderIsPrimary,'NULL')  ,',',ISNULL(@ProviderEffectiveDate,'NULL') ,',',ISNULL(@ProviderEndDate,'NULL') 	 ,',',ISNULL(@ProviderIsActive,'NULL') 	 ,',',ISNULL(@ProviderUpdatedDatetime,'NULL') ,',',ISNULL(@ProviderFTE,'NULL') ,',',ISNULL(@ProviderAllocationPercent,'NULL') ,',',ISNULL(@ProviderLocation,'NULL') ,',',ISNULL(@ProviderIsSpecialist,'NULL') ,',',ISNULL(@ProviderIsMidLevel,'NULL') ,',',ISNULL(@ProviderGLType,'NULL') ,',',ISNULL(@ProviderGLTypeID,'NULL') ,',',ISNULL(@ProviderGLProviderID,'NULL') ,',',ISNULL(@ProviderDHSType,'NULL'))
-
-;END
-ELSE
-BEGIN
-    RAISERROR ('Must choose action type and input valid DataSourceID, ProviderID, PracticeID, and ProviderAbbreviation', 16, 1);
-END
-*/
 
 /*
 --TRUNCATE TABLE --map.PracticeProviders 
@@ -877,9 +723,14 @@ INSERT INTO map.PracticeProviders SELECT '0~JSM','5~152022','JSM',1,'8/1/2026','
 /*9.9.26 - Per Michael - Updates to DDR - Remove Anna Heinz from Blue Book*/
 UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~DDR' and ProviderID = '1~20392'
 
+/*9.10.2026 - Chris Cross - EKK - Update Kevin Chessmore to be included in provider-level reports*/
+UPDATE map.PracticeProviders SET PracticeProviderFTE = 1, PracticeProviderAllocationPercent = 0, PracticeProviderUpdatedDatetime = GETDATE() WHERE PracticeID = '0~EKK' AND ProviderID = '1~18524'
+
+/*9.10.26 - Per Michael - Updates to SCS - Remove Pam Migliaccio from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~SCS' and ProviderID = '5~114504'
 
 
-	select * from map.vPracticeProviders p where p.PracticeID like '0~DDR%'
+	select * from map.vPracticeProviders p where p.PracticeID like '0~SCS%'
 	
 	select * from map.vPracticeProviders p where p.ProviderFullName like '%MARX%'
 	select * from dim.Practices p where p.PracticeName like '%MARX%'
