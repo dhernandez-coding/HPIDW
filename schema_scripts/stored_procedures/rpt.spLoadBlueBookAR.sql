@@ -76,8 +76,8 @@ INSERT INTO rpt.BlueBooks
 			,sum(t.AMOUNT) as ARAmountAll
 			,sum(t.ACTIVE_AR_AMOUNT) as ARAmountActive
 			,sum(t.BAD_DEBT_AR_AMOUNT) as ARAmountBadDebt
-		from CLARITY.[ORGFILTER].CLARITY_TDL_TRAN t
-			left join CLARITY.[ORGFILTER].ARPB_TRANSACTIONS tx ON tx.TX_ID = t.TX_ID
+		from CLARITY.[dbo].CLARITY_TDL_TRAN t
+			left join CLARITY.[dbo].ARPB_TRANSACTIONS tx ON tx.TX_ID = t.TX_ID
 
 		where 1=1
 			AND t.TRAN_TYPE = 1

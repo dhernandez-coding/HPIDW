@@ -4,7 +4,9 @@
 -- Change control: 
 -- 1. 05/09/2025 - Diego Hernandez - Adding safe load
 -- 2. 10/21/2025 - Chris Cross - Added UNION to INSERT accounts with no coded procedures
+-- 3. 09/11/2026 - Eric Silvestri added logic to bring in charged cpt on 360 and 361 rev code cases and wrapped in openquery
 -- =============================================
+
 CREATE procedure [stg].[spEPICReloadFactVisitProceduresFull] 
 AS 
 BEGIN
@@ -35,17 +37,44 @@ CREATE TABLE #StagingTable  (
 
 INSERT INTO #StagingTable
 --	select * from [NXDC1DBSQ016.CORP.INTEGRIS-HEALTH.COM].[Revenue].dbo.FactVisitProcedures
-	select
-		CONCAT('5~',px.SOURCE_KEY,'~',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),'~',COALESCE(px.CODING_INFO_CPT_LINE,px.LINE)) as  VisitProcedureID 
-		,5 as VisitProcedureDataSourceID 
-		,CONCAT(px.SOURCE_KEY,'~',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),'~',COALESCE(px.CODING_INFO_CPT_LINE,px.LINE)) as VisitProcedureSourceID 
-		,CONCAT('5~',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID)) as VisitProcedureVisitID 
-		,CONCAT('5~',px.HSP_ACCOUNT_ID) as VisitProcedureAccountID 
-		,CASE WHEN COALESCE(px.CODING_INFO_CPT_LINE,px.LINE) = 1 THEN 'Principal' 
+
+SELECT  
+	sub.VisitProcedureID
+	,sub.VisitProcedureDataSourceID
+	,sub.VisitProcedureSourceID
+	,sub.VisitProcedureVisitID
+	,sub.VisitProcedureAccountID
+	,CASE WHEN sub.ProcedureRank = 1 THEN 'Principal' 
 			  ELSE 'Secondary' END as VisitProcedureType 
-		,COALESCE(px.CODING_INFO_CPT_LINE,px.LINE)  as VisitProcedureSequence 
-		,CASE WHEN px.SOURCE_KEY in (11) THEN 'ICD10'
-			  WHEN px.SOURCE_KEY in (13,21,22,23) THEN 'CPT'
+	,sub.ProcedureRank  as VisitProcedureSequence
+	,sub.VisitProcedureCodeType
+	,sub.VisitProcedureCode
+	,sub.VisitProcedureDescription
+	,sub.VisitProcedureMod1
+	,sub.VisitProcedureMod2
+	,sub.VisitProcedureMod3
+	,sub.VisitProcedureMod4
+	,sub.VisitProcedureProviderID
+	,sub.VisitProcedureDate
+	,CASE WHEN sub.ProcedureRank = 1 THEN 1 ELSE 0 END as VisitProcedureIsPrimary
+	,sub.VisitProcedureIsActive
+	,sub.VisitProcedureUpdatedDatetime
+	
+FROM
+OPENQUERY ([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
+'
+	SELECT
+		RANK() OVER(PARTITION BY PX.HSP_ACCOUNT_ID ORDER BY ISNULL(PX.CODING_INFO_CPT_LINE,9999),PX.LINE) AS ProcedureRank
+		,CONCAT(''5~'',px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),''~'',px.LINE) as  VisitProcedureID 
+		,5 as VisitProcedureDataSourceID 
+		,CONCAT(px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),''~'',px.LINE) as VisitProcedureSourceID 
+		,CONCAT(''5~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID)) as VisitProcedureVisitID 
+		,CONCAT(''5~'',px.HSP_ACCOUNT_ID) as VisitProcedureAccountID 
+		--,CASE WHEN COALESCE(px.CODING_INFO_CPT_LINE,px.LINE) = 1 THEN ''Principal'' 
+		--	  ELSE ''Secondary'' END as VisitProcedureType 
+		--,COALESCE(px.CODING_INFO_CPT_LINE,px.LINE)  as VisitProcedureSequence 
+		,CASE WHEN px.SOURCE_KEY in (11) THEN ''ICD10''
+			  WHEN px.SOURCE_KEY in (13,21,22,23) THEN ''CPT''
 			  ELSE px.SOURCE_ABBR END as VisitProcedureCodeType 
 		,px.REF_BILL_CODE as VisitProcedureCode 
 		,px.NAME as VisitProcedureDescription 
@@ -53,23 +82,29 @@ INSERT INTO #StagingTable
 		,px.CODE_INT_MOD_2_CODE as VisitProcedureMod2
 		,px.CODE_INT_MOD_3_CODE as VisitProcedureMod3 
 		,px.CODE_INT_MOD_4_CODE as VisitProcedureMod4 
-		,CASE WHEN px.PX_PERF_PROV_ID is not null THEN CONCAT('5~',px.PX_PERF_PROV_ID) END as VisitProcedureProviderID 
+		,CASE WHEN px.PX_PERF_PROV_ID is not null THEN CONCAT(''5~'',px.PX_PERF_PROV_ID) END as VisitProcedureProviderID 
 		,px.PX_DATE as VisitProcedureDate 
-		,CASE WHEN COALESCE(px.CODING_INFO_CPT_LINE,px.LINE) = 1 THEN 1 ELSE 0 END as VisitProcedureIsPrimary
+		--,CASE WHEN COALESCE(px.CODING_INFO_CPT_LINE,px.LINE) = 1 THEN 1 ELSE 0 END as VisitProcedureIsPrimary
 		,1 as VisitProcedureIsActive 
 		,getdate() as VisitProcedureUpdatedDatetime
-		--, select px.* 
-	from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCOUNT a
-		INNER JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].V_CODING_ALL_DX_PX_LIST px ON px.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID
-		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCT_PAT_CSN csn ON csn.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and csn.LINE = 1
+	from [CLARITY].[ORGFILTER].HSP_ACCOUNT a
+		INNER JOIN [CLARITY].[ORGFILTER].V_CODING_ALL_DX_PX_LIST px ON px.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID
+		LEFT JOIN [CLARITY].[ORGFILTER].HSP_ACCT_PAT_CSN csn ON csn.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and csn.LINE = 1
 	where 1=1 
-		AND px.SOURCE_KEY IN (11 /*ICD Procedures*/
-							 ,13 /*Inpatient CPT*/
-							 --,21 /*Charge CPT - Excluding from VisitProcedures as these are supplies, implants, and equipment; Not performed procedures*/
-							 ,22 /*Coding CPT*/
-							 ,23 /*Combined CPT - Charged and Coded*/
-							 ) /*CPT and ICD Procedures*/
+		--AND px.SOURCE_KEY IN (11 /*ICD Procedures*/
+		--					 ,13 /*Inpatient CPT*/
+		--					 --,21 /*Charge CPT - Excluding from VisitProcedures as these are supplies, implants, and equipment; Not performed procedures*/
+		--					 ,22 /*Coding CPT*/
+		--					 ,23 /*Combined CPT - Charged and Coded*/
+		--					 ) /*CPT and ICD Procedures*/
+
+		AND (PX.SOURCE_KEY IN (11,13,22,23)
+			OR (PX.SOURCE_KEY IN (21) AND PX.PX_CPT_REV_CODE in (''0360'',''0361''))
+			)
 		AND COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID) is NOT null
+		--and PX.HSP_ACCOUNT_ID in (610173112,610107201)
+') sub
+
 
 INSERT INTO #StagingTable
   /*10/21/2025 - This block of code ensures all surgical cases have at least 1 procedure in the VisitProcedures table*/
