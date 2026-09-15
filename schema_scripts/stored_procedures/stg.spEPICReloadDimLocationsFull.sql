@@ -73,7 +73,7 @@ BEGIN
 	        ON l.LOC_ID = p.POS_ID
 	    LEFT JOIN [Clarity].[ORGFILTER].[ZC_STATE] s 
 	        ON p.STATE_C = s.STATE_C
-	    WHERE l.SERV_AREA_ID IN (425, 430, 452000)
+	    WHERE l.SERV_AREA_ID IN (425, 430, 452000, 429)
 	') AS loc;
 	-- Proceed only if at least 10 records were returned
 	IF (SELECT COUNT(1) FROM @StagingTable) >= 10

@@ -36,17 +36,16 @@ CREATE TABLE #StagingTable  (
     );
 
 INSERT INTO #StagingTable
---	select * from [NXDC1DBSQ016.CORP.INTEGRIS-HEALTH.COM].[Revenue].dbo.FactVisitProcedures
 
 SELECT  
-	sub.VisitProcedureID
+	CONCAT(sub.VisitProcedureID,'~',sub.ProcedureRank) AS VisitProcedureID
 	,sub.VisitProcedureDataSourceID
-	,sub.VisitProcedureSourceID
+	,CONCAT(sub.VisitProcedureSourceID,'~',sub.ProcedureRank) AS VisitProcedureSourceID
 	,sub.VisitProcedureVisitID
 	,sub.VisitProcedureAccountID
 	,CASE WHEN sub.ProcedureRank = 1 THEN 'Principal' 
-			  ELSE 'Secondary' END as VisitProcedureType 
-	,sub.ProcedureRank  as VisitProcedureSequence
+			  ELSE 'Secondary' END AS VisitProcedureType 
+	,sub.ProcedureRank  AS VisitProcedureSequence
 	,sub.VisitProcedureCodeType
 	,sub.VisitProcedureCode
 	,sub.VisitProcedureDescription
@@ -65,9 +64,11 @@ OPENQUERY ([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
 '
 	SELECT
 		RANK() OVER(PARTITION BY PX.HSP_ACCOUNT_ID ORDER BY ISNULL(PX.CODING_INFO_CPT_LINE,9999),PX.LINE) AS ProcedureRank
-		,CONCAT(''5~'',px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),''~'',px.LINE) as  VisitProcedureID 
+		--,CONCAT(''5~'',px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),''~'',px.LINE) as  VisitProcedureID 
+		,CONCAT(''5~'',px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID)) as  VisitProcedureID 
 		,5 as VisitProcedureDataSourceID 
-		,CONCAT(px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),''~'',px.LINE) as VisitProcedureSourceID 
+		--,CONCAT(px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID),''~'',px.LINE) as VisitProcedureSourceID 
+		,CONCAT(px.SOURCE_KEY,''~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID)) as VisitProcedureSourceID
 		,CONCAT(''5~'',COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID)) as VisitProcedureVisitID 
 		,CONCAT(''5~'',px.HSP_ACCOUNT_ID) as VisitProcedureAccountID 
 		--,CASE WHEN COALESCE(px.CODING_INFO_CPT_LINE,px.LINE) = 1 THEN ''Principal'' 
@@ -102,11 +103,10 @@ OPENQUERY ([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
 			OR (PX.SOURCE_KEY IN (21) AND PX.PX_CPT_REV_CODE in (''0360'',''0361''))
 			)
 		AND COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID) is NOT null
-		--and PX.HSP_ACCOUNT_ID in (610173112,610107201)
 ') sub
 
-
 INSERT INTO #StagingTable
+
   /*10/21/2025 - This block of code ensures all surgical cases have at least 1 procedure in the VisitProcedures table*/
   select 
 	CONCAT(a.AccountDataSourceID,'~99~',v.VisitID,'~1') 
@@ -133,7 +133,7 @@ INSERT INTO #StagingTable
 	INNER JOIN fact.Visits2 v ON v.VisitAccountID = a.AccountID AND v.VisitIsPrimary = 1
 	INNER JOIN fact.VisitCases vc ON vc.VisitCaseVisitID = v.VisitID
 	LEFT JOIN #StagingTable vp ON vp.VisitProcedureAccountID = a.AccountID
-  where 1=1
+  where 1=1 
     AND a.AccountDataSourceID = 5
 	AND vc.VisitCaseScheduleStatus = 'Completed'
 	AND vp.VisitProcedureID is null
@@ -142,6 +142,7 @@ INSERT INTO #StagingTable
 	,a.AccountID
 	,v.VisitID
 	,v.VisitSourceID
+
 
  IF (SELECT COUNT(1) FROM #StagingTable s where s.VisitProcedureCode <> '99999') >= 10
     BEGIN
@@ -189,14 +190,13 @@ INSERT INTO #StagingTable
 									,min(p.VisitProcedureID) as MinProcID
 									,max(p.VisitProcedureID) as MaxProcID
 								from #StagingTable p
-								where 1=1
+								where 1=1 
 									AND p.VisitProcedureSequence = 1
 									AND p.VisitProcedureIsPrimary = 1
 									AND p.VisitProcedureDataSourceID = 5
 								group by 
 									p.VisitProcedureAccountID
 								having count(1) > 1) d ON d.VisitProcedureAccountID = s.VisitProcedureAccountID
-				
 
             COMMIT TRANSACTION;
         END TRY
@@ -213,7 +213,6 @@ INSERT INTO #StagingTable
 	
 DROP TABLE IF EXISTS #StagingTable
 END;
-
 
 
 /*--Old Code Replaced on 9/1/2023--*/

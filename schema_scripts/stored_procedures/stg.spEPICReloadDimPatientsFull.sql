@@ -123,7 +123,7 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
 				left join [Clarity].[dbo].CLARITY_DEP d ON d.DEPARTMENT_ID = tx.DEPARTMENT_ID
 			where 1=1 
 				--AND TX_ID = 103562969
-				AND d.SERV_AREA_ID IN (452000,425,430)
+				AND d.SERV_AREA_ID IN (452000,425,430,429)
 			group by 
 				tx.PATIENT_ID
 																	

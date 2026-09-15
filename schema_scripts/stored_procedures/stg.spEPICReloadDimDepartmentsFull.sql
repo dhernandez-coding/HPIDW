@@ -7,12 +7,13 @@
 --   2. 05/09/2025 - Diego Hernandez - Safe reload logic using staging + transaction
 --   3. 10/29/2025 - Diego Hernandez - Modify this to OPENQUERY
 --   4. 03/31/2026 - Chris Cross - Added Service Area 452000
+--   5. 09/14/2026 - Chris Cross - Added Service Area 429
 -- =============================================
 
 CREATE PROCEDURE [stg].[spEPICReloadDimDepartmentsFull] AS
 
 BEGIN
-    SET NOCOUNT ON;
+    SET NOCOUNT OFF;
 
     PRINT 'Creating @StagingTable...';
     DECLARE @StagingTable TABLE (
@@ -87,7 +88,7 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
         ON l.LOC_ID = p.POS_ID
     LEFT JOIN [Clarity].[ORGFILTER].[ZC_STATE] s 
         ON p.STATE_C = s.STATE_C
-    WHERE d.SERV_AREA_ID IN (425, 430, 452000)
+    WHERE d.SERV_AREA_ID IN (425, 430, 452000, 429)
 ') AS dep;
 
     IF (SELECT COUNT(1) FROM @StagingTable) >= 10
