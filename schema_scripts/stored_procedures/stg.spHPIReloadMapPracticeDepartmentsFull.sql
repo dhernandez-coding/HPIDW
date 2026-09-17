@@ -174,6 +174,20 @@ insert into map.PracticeDepartments select '0~MRH','5~42501048001','1/1/2021','1
 9/8/2026 - Added new departments for Jeremy Marx
 insert into map.PracticeDepartments select '0~JSM','5~430001200101','1/1/2021','12/31/2099',1,getdate(),NULL
 
+9/16/2026 - Added new departments for SOS
+insert into map.PracticeDepartments select '0~SOS','5~42901001001','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001002','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001003','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001004','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001005','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001006','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001007','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001008','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001009','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001010','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001012','1/1/2021','12/31/2099',1,getdate(),NULL
+insert into map.PracticeDepartments select '0~SOS','5~42901001013','1/1/2021','12/31/2099',1,getdate(),NULL
+
 
 
 --select * from dim.departments d where d.DepartmentName like '%marx%'
