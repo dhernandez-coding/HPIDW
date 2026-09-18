@@ -70,6 +70,7 @@ SELECT
 	,[AccountUpdatedDatetime]
 	,[AccountGuarantorName]
 	,[AccountGuarantorID]
+	,[AccountGuarantorType]
 FROM [HPIDW].[fact].[Accounts] a
 	left join dim.PayerPlans pp ON pp.PayerPlanID = a.AccountPrimaryPayerPlanID
 	left join dim.DataSources ds ON ds.DataSourceID = a.AccountDatasourceID

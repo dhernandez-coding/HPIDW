@@ -88,7 +88,7 @@ BEGIN
 	where 1=1 
 		--AND pa.PracticeID is null
 		AND len(P.PracticeSourceID) < 6
-		AND p.PracticeID in ('0~JMA','0~JSM','0~ELB','0~MRH') /*Practices added after PowerApp was deprecated*/
+		AND p.PracticeID in ('0~JMA','0~JSM','0~ELB','0~MRH','0~WDM') /*Practices added after PowerApp was deprecated*/
 		
 
 IF (SELECT COUNT(1) FROM @StagingTable) >= 10 

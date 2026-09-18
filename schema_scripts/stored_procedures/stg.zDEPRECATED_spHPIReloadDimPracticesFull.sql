@@ -602,7 +602,13 @@ INSERT INTO dim.Practices SELECT '0~JSM',0,'JSM','Jeremy Marx, M.D.','JSM','EPIC
 /*Added 9/9/2026 - KASSI D STOCKERT */
 INSERT INTO dim.Practices SELECT '0~THP~KDS',0,'THP~KDS','KASSI D STOCKERT, M.D.','THP~KDS','THP VolumeExport','THP',1,0,GETDATE(),NULL,NULL,NULL,NULL,NULL
 
-select * from dim.Practices p where p.practiceid LIKE '0~JSM%'
+/*Added 9/16/2026 - Added SOS*/
+INSERT INTO dim.Practices SELECT '0~SOS',0,'SOS','Southwest Orthopaedic Specialists','SOS','EPIC','SOS',1,0,GETDATE(),NULL,NULL,NULL,'Ortho',NULL
+
+/*Added 9/17/2026 - Added Wendy D. McConnell, DO */
+INSERT INTO dim.Practices SELECT '0~WDM',0,'WDM','Wendy D. McConnell, D.O.','WDM','EPIC','TPG',1,0,GETDATE(),'37',NULL,'82','ENT',NULL
+
+select * from dim.Practices p where p.practiceid LIKE '0~SOS%'
 select * from dim.Practices p where p.PracticeGLLocationID = '36'
 */
 GO

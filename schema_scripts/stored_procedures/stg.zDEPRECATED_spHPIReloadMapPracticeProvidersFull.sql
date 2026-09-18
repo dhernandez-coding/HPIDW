@@ -729,13 +729,15 @@ UPDATE map.PracticeProviders SET PracticeProviderFTE = 1, PracticeProviderAlloca
 /*9.10.26 - Per Michael - Updates to SCS - Remove Pam Migliaccio from Blue Book*/
 UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~SCS' and ProviderID = '5~114504'
 
+/*9.17.26 - Per Michael - Updates to WDM - Add Wendy D. McConnell*/
+INSERT INTO map.PracticeProviders SELECT '0~WDM','5~109359','WDM',1,'9/21/2026','12/31/2099',1,getdate(),1,1,null,1,0,NULL,NULL,NULL,NULL
 
 	select * from map.vPracticeProviders p where p.PracticeID like '0~SCS%'
 	
-	select * from map.vPracticeProviders p where p.ProviderFullName like '%MARX%'
+	select * from map.vPracticeProviders p where p.ProviderFullName like '%McConnell%'
 	select * from dim.Practices p where p.PracticeName like '%MARX%'
 	
-select * from dim.vProviders p where p.ProviderFullName like '%MARX, J%'
+select * from dim.vProviders p where p.ProviderFullName like '%McConnell, W%'
 
 	select * from dim.vProviders p where p.providerdatasourceid = 10 and providerfullname like '%Nguyen%' order by Providerupdateddatetime
 

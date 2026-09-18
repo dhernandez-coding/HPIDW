@@ -189,8 +189,12 @@ insert into map.PracticeDepartments select '0~SOS','5~42901001012','1/1/2021','1
 insert into map.PracticeDepartments select '0~SOS','5~42901001013','1/1/2021','12/31/2099',1,getdate(),NULL
 
 
+9/17/2026 - Added new departments for Wendy McConnell
+insert into map.PracticeDepartments select '0~WDM','5~42501052001','1/1/2021','12/31/2099',1,getdate(),NULL
 
---select * from dim.departments d where d.DepartmentName like '%marx%'
+
+
+--select * from dim.departments d where d.DepartmentName like '%mccon%'
 
 select * from dim.vPractices p where p.practicename like '%maitino%'
 SELECT * FROM map.vPracticeDepartments where practiceid = '0~CSH2'

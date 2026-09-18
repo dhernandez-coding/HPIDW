@@ -267,9 +267,10 @@ INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,Prov
 /*07.31.2026 Create record for Michael R. Harvey*/
 INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~MRH',10,'MRH','MRH','MICHAEL R. HARVEY',1,getdate(),'1760048045'
 
+/*09.17.2026 Create record for Wendy D. McConnell*/
+INSERT INTO dim.Providers (ProviderID,ProviderDataSourceID,ProviderSourceID,ProviderAbbreviation, ProviderLastName,ProviderIsActive,ProviderUpdatedDatetime,ProviderNPI) SELECT '10~WDM',10,'WDM','WDM','WENDY D. MCCONNELL',1,getdate(),'1356674451'
 
-select * from dim.vProviders p where p.ProviderFullName like '%HARVEY, M%'
-
+select * from dim.vProviders p where p.ProviderFullName like '%mcconnell, w%'
 
 */
 GO

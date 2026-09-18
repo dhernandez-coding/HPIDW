@@ -45,6 +45,7 @@ CREATE TABLE [fact].[Accounts] (
     [AccountBeneficiaryNumber] VARCHAR(100) NULL,
     [AccountGuarantorName] NVARCHAR(155) NULL,
     [AccountGuarantorID] VARCHAR(155) NULL,
+    [AccountGuarantorType] VARCHAR(50) NULL,
     CONSTRAINT [PK__Accounts__4D3AA1BE992C7FF3] PRIMARY KEY ([AccountID])
 );
 GO

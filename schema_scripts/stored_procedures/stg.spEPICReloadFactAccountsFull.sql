@@ -6,6 +6,7 @@
 -- 1. 05/09/2025 - Diego Hernandez - Adding safe load
 -- 2. 10/29/2025 - Diego Hernandez - Change temptable and openquery 
 -- 3. 08/11/2026 - Chris Cross - Added conditional logic to AccountBillingStatus for Bad Debt
+-- 4. 09/17/2026 - Chris Cross - Added AccountGuarantorType; Changed from ORGFILTER to DBO with Service Area Filter to speed up query
 -- =============================================
 CREATE PROCEDURE [stg].[spEPICReloadFactAccountsFull] AS
 BEGIN
@@ -64,7 +65,8 @@ BEGIN
         AccountEmployerName VARCHAR(100),
         AccountBeneficiaryNumber VARCHAR(100),
         AccountGuarantorName NVARCHAR(155),
-        AccountGuarantorID NVARCHAR(150)
+        AccountGuarantorID NVARCHAR(150),
+		AccountGuarantorType VARCHAR(50)
     );
 
     -- Insert source query into staging table
@@ -127,35 +129,40 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
         END AS AccountEmployerName,
         cov.SUBSCR_NUM AS AccountBeneficiaryNumber,
         a.GUAR_NAME AS AccountGuarantorName,
-        a.GUARANTOR_ID AS AccountGuarantorID
-    FROM        [CLARITY].[ORGFILTER].HSP_ACCOUNT a
-	left join   [CLARITY].[ORGFILTER].HSP_ACCOUNT_3 a3 ON a3.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID
-	left join   [CLARITY].[ORGFILTER].ZC_ACCT_BILLSTS_HA bs ON bs.ACCT_BILLSTS_HA_C = a.ACCT_BILLSTS_HA_C
-	left join   [CLARITY].[ORGFILTER].ZC_ACCT_CLASS_HA ac ON ac.ACCT_CLASS_HA_C = a.ACCT_CLASS_HA_C
-	left join   [CLARITY].[ORGFILTER].ZC_ACCT_BASECLS_HA bc ON bc.ACCT_BASECLS_HA_C = a.ACCT_BASECLS_HA_C
-	left join   [CLARITY].[ORGFILTER].ZC_ADM_SOURCE src ON src.ADMIT_SOURCE_C = a.ADMISSION_SOURCE_C
-	left join   [CLARITY].[ORGFILTER].ZC_CODING_STS_HA cs ON cs.CODING_STATUS_C = a.CODING_STATUS_C
-	left join   [CLARITY].[ORGFILTER].HSP_ACCT_PAT_CSN csn ON csn.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and csn.LINE = 1 /*First CSN only*/
-	left join   [CLARITY].[ORGFILTER].PAT_ENC e1 ON e1.PAT_ENC_CSN_ID = COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID)
-	left join   [CLARITY].[ORGFILTER].ZC_APPT_STATUS st ON st.APPT_STATUS_C = e1.APPT_STATUS_C
-	--left join [CLARITY].[ORGFILTER].ZC_CANCEL_REASON cr ON cr.CANCEL_REASON_C = e1.CANCEL_REASON_C
-	--left join  et ON et.DISP_ENC_TYPE_C = e1.ENC_TYPE_C
-	left join   [CLARITY].[ORGFILTER].PAT_ENC_HSP e2 ON e2.PAT_ENC_CSN_ID = a.PRIM_ENC_CSN_ID
-	left join   [CLARITY].[ORGFILTER].[ZC_PAT_STATUS] ps ON ps.ADT_PATIENT_STAT_C = e2.ADT_PATIENT_STAT_C
-	left join   [CLARITY].[ORGFILTER].ZC_DISCH_DESTIN_HA dd ON dd.DISCH_DESTIN_HA_C = a.DISCH_DESTIN_HA_C
-	left join   [CLARITY].[ORGFILTER].CLARITY_DRG drg ON a.FINAL_DRG_ID = drg.DRG_ID
-	left join   [CLARITY].[ORGFILTER].[ZC_DRG_CASE_TYPE] drgt ON drgt.DRG_CASE_TYPE_C = drg.DRG_CASE_TYPE_C
-	left join   [CLARITY].[ORGFILTER].HSP_ACCT_SBO sbo ON sbo.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID
-	left join   [CLARITY].[ORGFILTER].[ZC_PAT_SERVICE] svc on svc.HOSP_SERV_C = a.PRIM_SVC_HA_C
-	--left join [CLARITY].[ORGFILTER].HSP_ACCT_CPT_CODES cpt ON cpt.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and cpt.LINE = 1
-	--left join [CLARITY].[ORGFILTER].HSP_ACCT_PX_LIST px ON px.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and px.LINE = 1
-	--left join [CLARITY].[ORGFILTER].CL_ICD_PX icd ON icd.ICD_PX_ID = px.FINAL_ICD_PX_ID
-	--left join [CLARITY].[ORGFILTER].HSP_ACCT_DX_LIST dx ON dx.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and dx.LINE = 1
-	--left join [CLARITY].[ORGFILTER].[CLARITY_EDG] edg ON edg.DX_ID = dx.DX_ID
-	left join   [CLARITY].[ORGFILTER].account aa on a.HSP_ACCOUNT_ID = aa.sbo_hsp_account_id
-	--left join [CLARITY].[ORGFILTER].CLARITY_EEP eep on aa.employer_id = emp.employer_id
-	left join   [CLARITY].[ORGFILTER].COVERAGE cov on a.COVERAGE_ID = cov.COVERAGE_ID
-	left join   [CLARITY].[ORGFILTER].CLARITY_EPP epp on a.PRIMARY_PLAN_ID = epp.benefit_plan_id
+        a.GUARANTOR_ID AS AccountGuarantorID,
+		gat.NAME as AccountGuarantorType
+    FROM        [CLARITY].[dbo].HSP_ACCOUNT a
+		left join   [CLARITY].[dbo].HSP_ACCOUNT_3 a3 ON a3.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID
+		left join   [CLARITY].[dbo].ZC_ACCT_BILLSTS_HA bs ON bs.ACCT_BILLSTS_HA_C = a.ACCT_BILLSTS_HA_C
+		left join   [CLARITY].[dbo].ZC_ACCT_CLASS_HA ac ON ac.ACCT_CLASS_HA_C = a.ACCT_CLASS_HA_C
+		left join   [CLARITY].[dbo].ZC_ACCT_BASECLS_HA bc ON bc.ACCT_BASECLS_HA_C = a.ACCT_BASECLS_HA_C
+		left join   [CLARITY].[dbo].ZC_ADM_SOURCE src ON src.ADMIT_SOURCE_C = a.ADMISSION_SOURCE_C
+		left join   [CLARITY].[dbo].ZC_CODING_STS_HA cs ON cs.CODING_STATUS_C = a.CODING_STATUS_C
+		left join   [CLARITY].[dbo].HSP_ACCT_PAT_CSN csn ON csn.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and csn.LINE = 1 /*First CSN only*/
+		left join   [CLARITY].[dbo].PAT_ENC e1 ON e1.PAT_ENC_CSN_ID = COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID)
+		left join   [CLARITY].[dbo].ZC_APPT_STATUS st ON st.APPT_STATUS_C = e1.APPT_STATUS_C
+		----left join [CLARITY].[dbo].ZC_CANCEL_REASON cr ON cr.CANCEL_REASON_C = e1.CANCEL_REASON_C
+		----left join  et ON et.DISP_ENC_TYPE_C = e1.ENC_TYPE_C
+		left join   [CLARITY].[dbo].PAT_ENC_HSP e2 ON e2.PAT_ENC_CSN_ID = a.PRIM_ENC_CSN_ID
+		left join   [CLARITY].[dbo].[ZC_PAT_STATUS] ps ON ps.ADT_PATIENT_STAT_C = e2.ADT_PATIENT_STAT_C
+		left join   [CLARITY].[dbo].ZC_DISCH_DESTIN_HA dd ON dd.DISCH_DESTIN_HA_C = a.DISCH_DESTIN_HA_C
+		left join   [CLARITY].[dbo].CLARITY_DRG drg ON a.FINAL_DRG_ID = drg.DRG_ID
+		left join   [CLARITY].[dbo].[ZC_DRG_CASE_TYPE] drgt ON drgt.DRG_CASE_TYPE_C = drg.DRG_CASE_TYPE_C
+		left join   [CLARITY].[dbo].HSP_ACCT_SBO sbo ON sbo.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID
+		left join   [CLARITY].[dbo].[ZC_PAT_SERVICE] svc on svc.HOSP_SERV_C = a.PRIM_SVC_HA_C
+		----left join [CLARITY].[dbo].HSP_ACCT_CPT_CODES cpt ON cpt.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and cpt.LINE = 1
+		----left join [CLARITY].[dbo].HSP_ACCT_PX_LIST px ON px.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and px.LINE = 1
+		----left join [CLARITY].[dbo].CL_ICD_PX icd ON icd.ICD_PX_ID = px.FINAL_ICD_PX_ID
+		----left join [CLARITY].[dbo].HSP_ACCT_DX_LIST dx ON dx.HSP_ACCOUNT_ID = a.HSP_ACCOUNT_ID and dx.LINE = 1
+		----left join [CLARITY].[dbo].[CLARITY_EDG] edg ON edg.DX_ID = dx.DX_ID
+		left join   [CLARITY].[dbo].account aa on a.HSP_ACCOUNT_ID = aa.sbo_hsp_account_id
+		----left join [CLARITY].[dbo].CLARITY_EEP eep on aa.employer_id = emp.employer_id
+		left join   [CLARITY].[dbo].COVERAGE cov on a.COVERAGE_ID = cov.COVERAGE_ID
+		left join   [CLARITY].[dbo].CLARITY_EPP epp on a.PRIMARY_PLAN_ID = epp.benefit_plan_id
+		left join   [CLARITY].[dbo].ACCOUNT ga on a.GUARANTOR_ID = ga.ACCOUNT_ID
+		left join   [CLARITY].[dbo].ZC_ACCOUNT_TYPE gat ON gat.ACCOUNT_TYPE_C = ga.ACCOUNT_TYPE_C
+	WHERE 1=1
+		AND a.SERV_AREA_ID in (425,430,452000,429)
 ') AS epic_accounts;
 
 -- Safety check and transaction
@@ -212,7 +219,8 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
                 AccountEmployerName,
                 AccountBeneficiaryNumber,
                 AccountGuarantorName,
-                AccountGuarantorID
+                AccountGuarantorID,
+				AccountGuarantorType
             )
             SELECT * FROM #StagingTable;
 

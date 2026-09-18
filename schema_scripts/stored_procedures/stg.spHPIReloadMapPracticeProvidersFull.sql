@@ -92,8 +92,8 @@ BEGIN
 	UNION ALL 
 
 	SELECT
-		CONCAT('0~',PracticeID,'~',pp.ProviderID) AS PracticeProviderID
-		,CONCAT('0~',PracticeID) AS PracticeID
+		CONCAT(PracticeID,'~',pp.ProviderID) AS PracticeProviderID
+		,PracticeID AS PracticeID
 		,mp.ProviderID AS ProviderID
 		,1 as PracticeProviderIsDefaultPractice
 		,1 as PracticeProviderIsDefaultReferralPractice
@@ -122,7 +122,7 @@ BEGIN
 		AND pp.ProviderID is not null
 		AND mp.ProviderID is not null
 		and pp.PracticeProviderIsActive = 1
-		AND pp.PracticeID in ('0~JMA','0~JSM','0~ELB','0~MRH')
+		AND pp.PracticeID in ('0~JMA','0~JSM','0~ELB','0~MRH','0~WDM')
 
 IF (SELECT COUNT(1) FROM @StagingTable) >= 10 
 	BEGIN 
