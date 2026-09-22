@@ -1,4 +1,4 @@
-CREATE TABLE [dim].[Practices] (
+CREATE TABLE [dim].[Practices_Backup_20260921] (
     [PracticeID] VARCHAR(100) NOT NULL,
     [PracticeDataSourceID] INT NULL,
     [PracticeSourceID] VARCHAR(100) NULL,
@@ -14,7 +14,6 @@ CREATE TABLE [dim].[Practices] (
     [PracticeGLPracticeID] VARCHAR(10) NULL,
     [PracticeSpecialty] VARCHAR(10) NULL,
     [PracticeSameStoreDate] DATE NULL,
-    [PracticeIsTPGBoardPacket] BIT NULL,
-    CONSTRAINT [PK__Practice__352A161230D0E8CA] PRIMARY KEY ([PracticeID])
+    [PracticeIsTPGBoardPacket] BIT NULL
 );
 GO

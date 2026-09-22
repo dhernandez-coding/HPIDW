@@ -54,9 +54,9 @@ SET @filename
 
 
 /*Clear out Temp Tables used in Query*/
-IF OBJECT_ID(N'tempdb..#TempAccounts') IS NOT NULL
+IF OBJECT_ID(N'tempdb..#TempAccounts1') IS NOT NULL
 BEGIN
-DROP TABLE #TempAccounts
+DROP TABLE #TempAccounts1
 END
 
 IF OBJECT_ID(N'tempdb..#TempAccounts2') IS NOT NULL
@@ -99,7 +99,7 @@ BEGIN
 DROP TABLE #TempRef_Bill_Code2
 END
 
-/*INSERT Filtered Records into #TempAccounts*/
+/*INSERT Filtered Records into #TempAccounts1*/
 	select
 	a.HSP_ACCOUNT_ID
 	,a.PRIM_ENC_CSN_ID
@@ -114,7 +114,7 @@ END
 	,a.DISCH_LOC_ID
 	,cd.department_name
 	,a.TOT_ACCT_BAL
-	INTO #TempAccounts
+	INTO #TempAccounts1
 	from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCOUNT a
 		INNER JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PAT_ENC_HSP eh ON eh.PAT_ENC_CSN_ID = a.PRIM_ENC_CSN_ID
 		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PAT_ENC e ON e.PAT_ENC_CSN_ID = eh.PAT_ENC_CSN_ID
@@ -135,7 +135,7 @@ END
 	,px.REF_BILL_CODE as CPT_CODE
 	,ROW_NUMBER() OVER (PARTITION BY px.HSP_ACCOUNT_ID ORDER BY ISNULL(px.CODING_INFO_CPT_LINE,999), px.LINE) AS ROW_NUM
 	FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].V_CODING_ALL_DX_PX_LIST px 
-		INNER JOIN #TempAccounts A ON px.HSP_ACCOUNT_ID = A.hsp_account_id
+		INNER JOIN #TempAccounts1 A ON px.HSP_ACCOUNT_ID = A.hsp_account_id
 	WHERE 1=1 
 		AND px.SOURCE_KEY IN (--11 /*ICD Procedures*/
 							 13 /*Inpatient CPT*/
@@ -289,7 +289,7 @@ select
 ,'' as FreeSpace
 ,'$' EORIndicator
 INTO ##TempCHOAS
-FROM #TempAccounts SUB
+FROM #TempAccounts1 SUB
 	INNER JOIN #TempPivot TP ON sub.hsp_account_id = TP.hsp_account_id
     INNER JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCOUNT a ON sub.hsp_account_id = a.hsp_account_id
 	INNER JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PAT_ENC_HSP eh ON eh.PAT_ENC_CSN_ID = a.PRIM_ENC_CSN_ID
@@ -412,7 +412,7 @@ begin
 end
 
 /*Clean up tables after use*/
-DROP TABLE #TempAccounts
+DROP TABLE #TempAccounts1
 DROP TABLE #TempAccounts2
 DROP TABLE #TempAccounts3
 DROP TABLE #TempPivot

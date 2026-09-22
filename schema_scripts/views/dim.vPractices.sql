@@ -172,6 +172,7 @@ UNION ALL
       ,ss.StartDate as PracticeFirstDateActivity
       ,ss.StartDate as zPracticeSameStoreDate
       ,ss.EndDate as SameStoreEndDate
+      ,p.PracticeIsTPGBoardPacket as PracticeIsTPGBoardPacket
 
 
 FROM [dim].[Practices] p

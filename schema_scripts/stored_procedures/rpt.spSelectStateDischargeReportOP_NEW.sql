@@ -27,6 +27,7 @@ IF OBJECT_ID('tempdb..#TEMPAccounts')      IS NOT NULL DROP TABLE #TEMPAccounts;
 IF OBJECT_ID('tempdb..#TEMPDx')            IS NOT NULL DROP TABLE #TEMPDx;
 IF OBJECT_ID('tempdb..#TEMPEcode')         IS NOT NULL DROP TABLE #TEMPEcode;
 IF OBJECT_ID('tempdb..#TEMPTransactions')  IS NOT NULL DROP TABLE #TEMPTransactions;
+IF OBJECT_ID('tempdb..#TEMPProcedures')    IS NOT NULL DROP TABLE #TEMPProcedures;
 
 /* ============================================================
    1. #TEMPChargeFilter
@@ -234,31 +235,128 @@ EXEC sp_executesql @sql;
 CREATE TABLE #TEMPTransactions (
 	HSP_ACCOUNT_ID  bigint NOT NULL,
 	UB_REV_CODE_ID  int NULL,
-	CPT_CODE        varchar(20) NULL,
 	SERVICE_DATE    datetime NULL,
 	QUANTITY        decimal(18,2) NULL,
 	TX_AMOUNT       decimal(18,2) NULL
 );
 
-SET @innerSql = N'
-select
-	t.HSP_ACCOUNT_ID, t.UB_REV_CODE_ID, t.CPT_CODE, t.SERVICE_DATE, t.QUANTITY, t.TX_AMOUNT
-from [CLARITY].[ORGFILTER].[HSP_TRANSACTIONS] t
-	join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = t.HSP_ACCOUNT_ID
-where t.UB_REV_CODE_ID is not null
-	and ' + @accountFilterSql + N'
-';
+--SET @innerSql = N'
+--select
+--	t.HSP_ACCOUNT_ID, t.UB_REV_CODE_ID, t.CPT_CODE, t.SERVICE_DATE, t.QUANTITY, t.TX_AMOUNT
+--from [CLARITY].[ORGFILTER].[HSP_TRANSACTIONS] t
+--	join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = t.HSP_ACCOUNT_ID
+--where t.UB_REV_CODE_ID is not null
+--	and ' + @accountFilterSql + N'
 
 SET @sql = N'
-INSERT INTO #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID, CPT_CODE, SERVICE_DATE, QUANTITY, TX_AMOUNT)
-SELECT HSP_ACCOUNT_ID, UB_REV_CODE_ID, CPT_CODE, SERVICE_DATE, QUANTITY, TX_AMOUNT
-FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''' + REPLACE(@innerSql, '''', '''''') + N''')
+INSERT INTO #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID, SERVICE_DATE, QUANTITY, TX_AMOUNT)
+select
+	SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID)) as HSP_ACCOUNT_ID
+	,t.TransactionRevenueCode as UB_REV_CODE_ID
+	,t.TransactionDateOfService as SERVICE_DATE
+	,t.TransactionUnits as QUANTITY
+	,sum(t.TransactionAmount) as TX_AMOUNT
+from fact.Transactions2 t
+	left join fact.Accounts a on a.AccountID = t.TransactionAccountID
+								and a.AccountDataSourceID = 5
+	left join dim.locations l on l.LocationID = a.AccountLocationID
+								and l.LocationDataSourceID = 5
+where t.TransactionDatasourceID = 5
+	and t.TransactionRevenueCode is not null 
+	and a.AccountDateOfDischarge >= ''' + @startdateLit + N'''
+	and a.AccountDateOfDischarge <= ''' + @enddateLit + N'''
+	and a.AccountCodingStatus = ''Completed'' 
+	and a.AccountClass = ''Outpatient'' 
+	and TRY_CAST(SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID)) as bigint) >= 600000000
+	and a.AccountTotalCharges > 0
+	and a.AccountPatientID is not null
+	and l.LocationSourceID =''' + @locationLit + N'''
+	and (a.AccountFinancialClassID = ''5~4'' 
+		 or exists (select * from dim.PayerPlans pp
+					 where pp.PayerPlanName not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
+					   and pp.PayerPlanDataSourceID = 5
+					   and a.AccountPrimaryPayerPlanID = pp.PayerPlanID))
+group by
+	SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID))
+	,t.TransactionRevenueCode 
+	,t.TransactionDateOfService 
+	,t.TransactionUnits
+
+';
+EXEC sp_executesql @sql;
+
+/* ============================================================
+   5b. #TEMPProcedures
+       Split out from #TEMPTransactions. The old version joined
+       fact.VisitProcedures at the account level filtered to
+       VisitProcedureSequence = 1 - meaning only the principal
+       procedure could ever appear (every other-sequence procedure
+       came back NULL from that join, then got silently dropped by
+       "CPT_CODE <> 'EDNOCHG'" since NULL <> anything is unknown).
+       That's why oth_cpt_proc never showed anything.
+       Pulled independently here so:
+         - #TEMPTransactions's charge totals stay account-level,
+           not fanned out by however many procedures an account has
+         - princ/oth_cpt_proc can see every procedure, not just #1
+         - VisitProcedureSequence gives a real, deterministic order
+           (unlike raw transaction data, which had none)
+       Filtered to VisitProcedureCodeType = 'CPT' since this table
+       also carries ICD-10 procedure codes, and princ/oth_cpt_proc
+       are explicitly CPT-only fields - flagging this assumption,
+       confirm it matches what the state expects.
+       ProviderNPI resolved via dim.Providers (ProviderID ->
+       ProviderNPI) instead of defaulting to the account's
+       AttendingNPI, since this is the actual performing provider
+       for that specific procedure.
+   ============================================================ */
+CREATE TABLE #TEMPProcedures (
+	HSP_ACCOUNT_ID          bigint NOT NULL,
+	VisitProcedureSequence  int NULL,
+	CPT_CODE                varchar(20) NULL,
+	MOD1	                varchar(20) NULL,
+	MOD2	                varchar(20) NULL,
+	ProviderNPI             varchar(20) NULL,
+	PX_DATE                 datetime NULL
+);
+
+SET @sql = N'
+INSERT INTO #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence, CPT_CODE, MOD1, MOD2, ProviderNPI, PX_DATE)
+select
+	SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as HSP_ACCOUNT_ID
+	,p.VisitProcedureSequence
+	,p.VisitProcedureCode
+	,p.VisitProcedureMod1 as MOD1
+	,p.VisitProcedureMod2 as MOD2
+	,prov.ProviderNPI
+	,p.VisitProcedureDate
+from fact.VisitProcedures p
+	join fact.Accounts a on a.AccountID = p.VisitProcedureAccountID
+						 and a.AccountDataSourceID = 5
+	left join dim.Providers prov on prov.ProviderID = p.VisitProcedureProviderID
+	left join dim.locations l on l.LocationID = a.AccountLocationID
+						 and l.LocationDataSourceID = 5
+where p.VisitProcedureDataSourceID = 5
+	and p.VisitProcedureCodeType = ''CPT''
+	and a.AccountDateOfDischarge >= ''' + @startdateLit + N'''
+	and a.AccountDateOfDischarge <= ''' + @enddateLit + N'''
+	and a.AccountCodingStatus = ''Completed'' 
+	and a.AccountClass = ''Outpatient'' 
+	and TRY_CAST(SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as bigint) >= 600000000
+	and a.AccountTotalCharges > 0
+	and a.AccountPatientID is not null
+	and l.LocationSourceID =''' + @locationLit + N'''
+	and (a.AccountFinancialClassID = ''5~4'' 
+		 or exists (select * from dim.PayerPlans pp
+					 where pp.PayerPlanName not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
+					   and pp.PayerPlanDataSourceID = 5
+					   and a.AccountPrimaryPayerPlanID = pp.PayerPlanID))
 ';
 EXEC sp_executesql @sql;
 
 CREATE INDEX IX_TEMPDx_AcctID           ON #TEMPDx (HSP_ACCOUNT_ID, LINE);
 CREATE INDEX IX_TEMPEcode_AcctID        ON #TEMPEcode (HSP_ACCOUNT_ID);
 CREATE INDEX IX_TEMPTransactions_AcctID ON #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID);
+CREATE INDEX IX_TEMPProcedures_AcctID   ON #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence);
 
 
 /* ============================================================
@@ -538,24 +636,39 @@ DECLARE @Dt XML=
 				case
 				when procs.CPT_CODE is null
 				then  '99999'
-				else max(procs.cpt_code)
+				else procs.CPT_CODE
 				end as 'princ_cpt_proc',
 				case
-				 when acct.AttendingNPI = '' then 'OTHOOO'
-				 when acct.AttendingNPI is null then 'OTHOOO'
-				 else acct.AttendingNPI
+				 when procs.ProviderNPI = '' then 'OTHOOO'
+				 when procs.ProviderNPI is null then 'OTHOOO'
+				 else procs.ProviderNPI
 				end as 'princ_cpt_proc_phys_id',
-				convert(date,procs.SERVICE_DATE,100) as 'princ_cpt_proc_date'
+				convert(date,procs.PX_DATE,100) as 'princ_cpt_proc_date',
 
-			from #TEMPTransactions procs
+					(
+						select top (5)
+							CONCAT(proc1.CPT_CODE,proc1.MOD1,proc1.MOD2) as 'oth_cpt_proc_code',
+							case
+							 when proc1.ProviderNPI = '' then 'OTHOOO'
+							 when proc1.ProviderNPI is null then 'OTHOOO'
+							 else proc1.ProviderNPI
+							end as 'oth_cpt_proc_phys_id',
+							convert(date,proc1.PX_DATE,100) as 'oth_cpt_proc_date'
+
+						from #TEMPProcedures proc1
+
+						where acct.hsp_account_id = proc1.HSP_ACCOUNT_ID
+							and proc1.VisitProcedureSequence <> 1
+
+						order by proc1.VisitProcedureSequence
+
+						for xml Path('proc'), TYPE
+					)
+
+			from #TEMPProcedures procs
 
 			where acct.hsp_account_id=procs.HSP_ACCOUNT_ID
-				and LEFT(CONVERT(varchar(10), procs.UB_REV_CODE_ID), 2) IN ('36','48','49','75','76')
-				and procs.CPT_CODE <> 'EDNOCHG'
-					--and procs.UB_REV_CODE_ID = 450
-					--and procs.CPT_CODE <> 'EDNOCHG'
-			group by
-			procs.CPT_CODE,procs.SERVICE_DATE
+				and procs.VisitProcedureSequence = 1
 
 			  for xml auto, type
 		),
@@ -618,6 +731,7 @@ IF OBJECT_ID('tempdb..#TEMPAccounts')      IS NOT NULL DROP TABLE #TEMPAccounts;
 IF OBJECT_ID('tempdb..#TEMPDx')            IS NOT NULL DROP TABLE #TEMPDx;
 IF OBJECT_ID('tempdb..#TEMPEcode')         IS NOT NULL DROP TABLE #TEMPEcode;
 IF OBJECT_ID('tempdb..#TEMPTransactions')  IS NOT NULL DROP TABLE #TEMPTransactions;
+IF OBJECT_ID('tempdb..#TEMPProcedures')    IS NOT NULL DROP TABLE #TEMPProcedures;
 
 end
 GO
