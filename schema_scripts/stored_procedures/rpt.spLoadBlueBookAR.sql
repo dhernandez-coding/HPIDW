@@ -22,6 +22,89 @@ DECLARE @6MonthStartDate date = DATEADD(MONTH,-6,@EndDate)
 DELETE FROM rpt.BlueBooks WHERE ReportSection in ('AR Aging') and FiscalYear = @CurrentYear and FiscalPeriod = @CurrentPeriod
 
 /*Epic Data*/
+
+
+
+INSERT INTO rpt.BlueBooks
+(
+    [FiscalYear],
+    [FiscalPeriod],
+    [FiscalYearPeriod],
+    [ReportSection],
+    [ReportGroupLevel1],
+    [ReportGroupLevel2],
+    [PracticeID],
+    [ReportingProviderID],
+    [FiscalPeriodValue],
+    [UpdatedDatetime]
+)
+SELECT
+    @CurrentYear AS FiscalYear,
+    @CurrentPeriod AS FiscalPeriod,
+    FORMAT(DATEFROMPARTS(@CurrentYear, @CurrentPeriod, 1),'MMM-yy') AS FiscalYearPeriod,
+    'AR Aging' AS ReportSection,
+    ISNULL(pg.PayerGroupName, 'Other Commercial') AS ReportGroupLevel1,
+    CASE
+        WHEN t.SERVICE_DATE_AGE BETWEEN 0 AND 30 THEN '0-30'
+        WHEN t.SERVICE_DATE_AGE BETWEEN 31 AND 60 THEN '31-60'
+        WHEN t.SERVICE_DATE_AGE BETWEEN 61 AND 90 THEN '61-90'
+        WHEN t.SERVICE_DATE_AGE BETWEEN 91 AND 120 THEN '91-120'
+        WHEN t.SERVICE_DATE_AGE > 120 THEN '121+'
+        ELSE NULL
+    END AS ReportGroupLevel2,
+    pt.PracticeID,
+    CONCAT('5~', t.BILLING_PROVIDER_ID) AS ReportingProviderID,
+    SUM(t.ACTIVE_AMOUNT) AS FiscalPeriodValue,
+    GETDATE() AS UpdatedDatetime
+FROM OPENQUERY
+(
+    [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
+    '
+    SELECT
+        t.TX_ID,
+        t.DEPARTMENT_ID,
+        t.CURRENT_PAYER_ID,
+        t.BILLING_PROVIDER_ID,
+        t.SERVICE_DATE_AGE,
+        t.ACTIVE_AMOUNT
+    FROM CLARITY.[ORGFILTER].V_ARPB_ATB_TX_DETAIL t
+    WHERE 1 = 1
+        AND t.AGING_DATE = DATEADD(
+            DAY,
+            -1,
+            DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
+        )
+        AND t.ACTIVE_AMOUNT > 0
+    '
+) t
+    LEFT JOIN map.PracticeDepartments pd
+        ON pd.DepartmentID = CONCAT('5~', t.DEPARTMENT_ID)
+
+    LEFT JOIN dim.vPractices pt
+        ON pt.PracticeID = pd.PracticeID
+
+    LEFT JOIN dim.Payers py ON py.PayerID = CONCAT( '5~',ISNULL(t.CURRENT_PAYER_ID, '0') )
+
+    LEFT JOIN dim.PayerGroups pg ON pg.PayerGroupID = py.PayerGroupID
+
+WHERE 1 = 1
+    AND pd.DepartmentID IS NOT NULL
+
+GROUP BY
+    ISNULL(pg.PayerGroupName, 'Other Commercial'),
+    CASE
+        WHEN t.SERVICE_DATE_AGE BETWEEN 0 AND 30 THEN '0-30'
+        WHEN t.SERVICE_DATE_AGE BETWEEN 31 AND 60 THEN '31-60'
+        WHEN t.SERVICE_DATE_AGE BETWEEN 61 AND 90 THEN '61-90'
+        WHEN t.SERVICE_DATE_AGE BETWEEN 91 AND 120 THEN '91-120'
+        WHEN t.SERVICE_DATE_AGE > 120 THEN '121+'
+        ELSE NULL
+    END,
+    pt.PracticeID,
+    t.BILLING_PROVIDER_ID
+
+
+/*--Old methodology that returns only current AR--
 INSERT INTO rpt.BlueBooks
 ([FiscalYear]
       ,[FiscalPeriod]
@@ -114,6 +197,8 @@ INSERT INTO rpt.BlueBooks
 		,sub.ReportGroupLevel2
 		,sub.PracticeID
 		,sub.ReportingProviderID
+
+		*/
 
 /*--Old methodology that returns only current AR--
 	SELECT 
