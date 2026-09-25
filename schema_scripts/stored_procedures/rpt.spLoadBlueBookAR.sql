@@ -69,12 +69,11 @@ FROM OPENQUERY
         t.ACTIVE_AMOUNT
     FROM CLARITY.[ORGFILTER].V_ARPB_ATB_TX_DETAIL t
     WHERE 1 = 1
-        AND t.AGING_DATE = DATEADD(
-            DAY,
-            -1,
-            DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
-        )
+        AND t.AGING_DATE = DATEADD(DAY,-1,DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
         AND t.ACTIVE_AMOUNT > 0
+		AND (t.SERV_AREA_ID IN (425, 430) OR (t.SERV_AREA_ID IN (452000) AND t.SERVICE_DATE >= ''2026-03-23''))
+        AND (t.DEPARTMENT_ID NOT IN (42501049001, 42501048001) OR (t.DEPARTMENT_ID IN (42501049001, 42501048001) AND t.SERVICE_DATE >= ''2026-07-29''))
+
     '
 ) t
     LEFT JOIN map.PracticeDepartments pd
@@ -102,6 +101,8 @@ GROUP BY
     END,
     pt.PracticeID,
     t.BILLING_PROVIDER_ID
+
+	select * from rpt.ARCurrentPB
 
 
 /*--Old methodology that returns only current AR--
