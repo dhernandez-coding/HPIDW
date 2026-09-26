@@ -11,8 +11,8 @@ AS BEGIN
 
 SET NOCOUNT ON;
 
---DECLARE @startdate datetime = '2026-07-01'
---DECLARE @enddate datetime = '2026-07-31'
+--DECLARE @startdate datetime = '2026-01-01'
+--DECLARE @enddate datetime = '2026-01-31'
 SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
 SET @enddate   = IsNull(@enddate,   DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
 
@@ -570,8 +570,16 @@ DECLARE @Dt XML=
 							  when acct.BENEFIT_PLAN_NAME = 'BENEFIT MANAGEMENT, INC - PREFERRED COMMUNITY CHOICE' THEN 'BENEFIT MANAGEMENT INC PREFERRED COMMUNITY CHOICE'
 				  else acct.BENEFIT_PLAN_NAME
 					end  as 'prim_payer_name',
-
-			 case
+						 case
+			 /* Payer-specific overrides must come first: several of these share a
+			    FINANCIAL_CLASS with a much broader payer group below, so without
+			    checking benefit_plan_id/payor_id up front, the financial-class
+			    branch further down would catch them first and mask the override. */
+			 when acct.BENEFIT_PLAN_ID in (1601901,1601902) then 5 /*Atlas / Centralink Bundled Payment*/
+			 when acct.BENEFIT_PLAN_ID = 1601904 or acct.PAYOR_ID = 10622 then 6 /*HPI Bundled Self Pay*/
+			 when acct.BENEFIT_PLAN_ID = 1800120 then 2 /*Mending Health*/
+			 when acct.BENEFIT_PLAN_ID in (1800112,1550109) then 7 /*Chickasaw Nation*/
+			 when acct.BENEFIT_PLAN_ID in (2400503,2400501) then 5 /*Department of Labor*/
 			 when acct.FINANCIAL_CLASS in (100,140,150,170,180,190,210,250,260,270,280,310)
 				  then 1 /*Commercial*/
 				  when acct.FINANCIAL_CLASS in (2,220,101)
@@ -582,22 +590,45 @@ DECLARE @Dt XML=
 				  OR acct.BENEFIT_PLAN_ID in(3000113,4000113,4000203) /*Humana*/
 				  then 3 /*Medicaid*/
 				  when acct.FINANCIAL_CLASS in (6,230)
-				  OR acct.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401,3000113, 4000113)
+				  OR acct.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401)
 				  then 4 /*VA or Military*/
 				  when acct.FINANCIAL_CLASS = 240
 				  OR acct.BENEFIT_PLAN_ID in
 				  (1800103,1800106,1801701,2400427) /*Hobby Lobby mapped to work comp*/
 				  then 5 /*Work Comp*/
 				  When acct.FINANCIAL_CLASS = 311
-				  or acct.BENEFIT_PLAN_ID in
-				  (1601904) /*Self Pay*/
-				  or acct.PAYOR_ID in
-				  (10622) /*Self Pay*/
 				  then 6 /*Uninsured or Self Pay*/
 				  when acct.FINANCIAL_CLASS = 160 and acct.PAYOR_NAME like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 6 /*Uninsured or Self Pay*/
-				  when (acct.FINANCIAL_CLASS  in (160, 155) OR acct.BENEFIT_PLAN_ID in(1601903, 1601904,1602101,1550109,1600109,1800112)
+				  when (acct.FINANCIAL_CLASS  in (160, 155) OR acct.BENEFIT_PLAN_ID in(1601903,1602101,1600109)
 				  ) and acct.PAYOR_NAME not like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 7
 				  else 7 end as 'prim_payer_class',
+			 --case
+			 --when acct.FINANCIAL_CLASS in (100,140,150,170,180,190,210,250,260,270,280,310)
+				--  then 1 /*Commercial*/
+				--  when acct.FINANCIAL_CLASS in (2,220,101)
+				--  OR acct.BENEFIT_PLAN_ID in(2201104, 2201105) /*UHC Dual Complete*/
+				--  then 2 /*Medicare*/
+				--  when acct.FINANCIAL_CLASS in (1,3,215,401)
+				--  OR acct.BENEFIT_PLAN_ID in(3000112, 3000304, 4000112, 4000201) /*Aetna*/
+				--  OR acct.BENEFIT_PLAN_ID in(3000113,4000113,4000203) /*Humana*/
+				--  then 3 /*Medicaid*/
+				--  when acct.FINANCIAL_CLASS in (6,230)
+				--  OR acct.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401,3000113, 4000113)
+				--  then 4 /*VA or Military*/
+				--  when acct.FINANCIAL_CLASS = 240
+				--  OR acct.BENEFIT_PLAN_ID in
+				--  (1601901,1601902,1800103,1800106,1801701,2400427) /*Hobby Lobby mapped to work comp*/
+				--  then 5 /*Work Comp*/
+				--  When acct.FINANCIAL_CLASS = 311
+				--  or acct.BENEFIT_PLAN_ID in
+				--  (1601904) /*Self Pay*/
+				--  or acct.PAYOR_ID in
+				--  (10622) /*Self Pay*/
+				--  then 6 /*Uninsured or Self Pay*/
+				--  when acct.FINANCIAL_CLASS = 160 and acct.PAYOR_NAME like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 6 /*Uninsured or Self Pay*/
+				--  when (acct.FINANCIAL_CLASS  in (160, 155) OR acct.BENEFIT_PLAN_ID in(1601903, 1601904,1602101,1550109,1600109,1800112)
+				--  ) and acct.PAYOR_NAME not like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 7
+				--  else 7 end as 'prim_payer_class',
 
      		convert(numeric,acct.TOT_CHGS,100) as 'total_charges',
 			'0131' as 'bill_type',

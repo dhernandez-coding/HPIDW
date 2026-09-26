@@ -77,9 +77,9 @@ DECLARE @Parameters VARCHAR(4096) =
     ', @reportingperiod = ''' + CAST(@Month AS VARCHAR(MAX)) + ''''
 
 -- Gather the stored procedure names (ensure they are fully qualified)
-DECLARE @EDReportStoredProcedure VARCHAR(4096) = '[rpt].[spSelectStateDischargeReportED_export]'
-DECLARE @IPReportStoredProcedure VARCHAR(4096) = '[rpt].[spSelectStateDischargeReportIP_export]'
-DECLARE @OPReportStoredProcedure VARCHAR(4096) = '[rpt].[spSelectStateDischargeReportOP_export]'
+DECLARE @EDReportStoredProcedure VARCHAR(4096) = '[rpt].[spSelectStateDischargeReportED_NEW]'
+DECLARE @IPReportStoredProcedure VARCHAR(4096) = '[rpt].[spSelectStateDischargeReportIP_NEW]'
+DECLARE @OPReportStoredProcedure VARCHAR(4096) = '[rpt].[spSelectStateDischargeReportOP_NEW]'
 
 -- Create the file names
 DECLARE @FileExtension VARCHAR(8) = '.xml'

@@ -1,13 +1,12 @@
 CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED_NEW]
 
+
  @startdate datetime = null,
  @enddate datetime = null,
  @Location int = 43004001 --HPI CHN
- -- 43005005 --HPI CHS
- --43006001 --HPI NWSH
-
-
-AS BEGIN
+ 	--43005005 --HPI CHS
+	--43006001 --HPI NWSH
+as begin
 
 SET NOCOUNT ON;
 
@@ -24,6 +23,7 @@ IF OBJECT_ID('tempdb..#TEMPAccounts')     IS NOT NULL DROP TABLE #TEMPAccounts;
 IF OBJECT_ID('tempdb..#TEMPDx')           IS NOT NULL DROP TABLE #TEMPDx;
 IF OBJECT_ID('tempdb..#TEMPEcode')        IS NOT NULL DROP TABLE #TEMPEcode;
 IF OBJECT_ID('tempdb..#TEMPTransactions') IS NOT NULL DROP TABLE #TEMPTransactions;
+IF OBJECT_ID('tempdb..#TEMPProcedures')   IS NOT NULL DROP TABLE #TEMPProcedures;
 
 /* ============================================================
    1. #TEMPAccounts
@@ -40,7 +40,7 @@ CREATE TABLE #TEMPAccounts (
 	DISCH_DATE_TIME     datetime     NULL,
 	ADMISSION_SOURCE_C  int          NULL,
 	ADMISSION_TYPE_C    int          NULL,
-	PATIENT_STATUS_C    varchar(20)  NULL,
+	PATIENT_STATUS_C    int          NULL,
 	TOT_CHGS            decimal(18,2) NULL,
 	PAT_MIDDLE_NAME     nvarchar(50) NULL,
 	PAT_LAST_NAME       nvarchar(50) NULL,
@@ -193,40 +193,117 @@ EXEC sp_executesql @sql;
 
 /* ============================================================
    4. #TEMPTransactions
-      Replaces BOTH the old "procs" (principal CPT) and
-      "charge" (revenue-code breakdown) correlated subqueries -
-      both hit HSP_TRANSACTIONS, so one pull now covers both.
+      Rewritten to pull from the internal warehouse (fact.Transactions2)
+      instead of OPENQUERY against Clarity - same conversion already
+      applied to the OP proc. Transactions and procedures are pulled
+      separately (see #TEMPProcedures below): joining VisitProcedures
+      to Transactions at the account level (rather than a true
+      transaction-line key) caused a join fan-out that inflated the
+      charge totals, so this table stays transaction-data-only.
+      AccountClass = 'Emergency' confirmed against fact.Accounts
+      (distinct values: Emergency, Inpatient, Outpatient).
    ============================================================ */
 CREATE TABLE #TEMPTransactions (
 	HSP_ACCOUNT_ID  bigint NOT NULL,
 	UB_REV_CODE_ID  int NULL,
-	CPT_CODE        varchar(20) NULL,
 	SERVICE_DATE    datetime NULL,
 	QUANTITY        decimal(18,2) NULL,
 	TX_AMOUNT       decimal(18,2) NULL
 );
 
-SET @innerSql = N'
+SET @sql = N'
+INSERT INTO #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID, SERVICE_DATE, QUANTITY, TX_AMOUNT)
 select
-	t.HSP_ACCOUNT_ID, t.UB_REV_CODE_ID, t.CPT_CODE, t.SERVICE_DATE, t.QUANTITY, t.TX_AMOUNT
-from [CLARITY].[ORGFILTER].[HSP_TRANSACTIONS] t
-	join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = t.HSP_ACCOUNT_ID
-where t.UB_REV_CODE_ID is not null
-	and ' + @accountFilterSql + N'
+	SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID)) as HSP_ACCOUNT_ID
+	,t.TransactionRevenueCode as UB_REV_CODE_ID
+	,t.TransactionDateOfService as SERVICE_DATE
+	,t.TransactionUnits as QUANTITY
+	,sum(t.TransactionAmount) as TX_AMOUNT
+from fact.Transactions2 t
+	left join fact.Accounts a on a.AccountID = t.TransactionAccountID
+								and a.AccountDataSourceID = 5
+	left join dim.locations l on l.LocationID = a.AccountLocationID
+								and l.LocationDataSourceID = 5
+where t.TransactionDatasourceID = 5
+	and t.TransactionRevenueCode is not null 
+	and a.AccountDateOfDischarge >= ''' + @startdateLit + N'''
+	and a.AccountDateOfDischarge <= ''' + @enddateLit + N'''
+	and a.AccountCodingStatus = ''Completed'' 
+	and a.AccountClass = ''Emergency'' 
+	and TRY_CAST(SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID)) as bigint) >= 600000000
+	and a.AccountTotalCharges > 0
+	and a.AccountPatientID is not null
+	and l.LocationSourceID =''' + @locationLit + N'''
+	and (a.AccountFinancialClassID = ''5~4'' 
+		 or exists (select * from dim.PayerPlans pp
+					 where pp.PayerPlanName not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
+					   and pp.PayerPlanDataSourceID = 5
+					   and a.AccountPrimaryPayerPlanID = pp.PayerPlanID))
+group by
+	SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID))
+	,t.TransactionRevenueCode 
+	,t.TransactionDateOfService 
+	,t.TransactionUnits
 ';
+EXEC sp_executesql @sql;
+
+/* ============================================================
+   4b. #TEMPProcedures
+       Same split as OP: procedure codes pulled independently from
+       fact.VisitProcedures, keyed by VisitProcedureSequence (a real,
+       deterministic order), with the performing provider's NPI
+       resolved via dim.Providers rather than defaulting every
+       procedure to the account's AttendingNPI.
+       Filtered to VisitProcedureCodeType = 'CPT' - same assumption
+       flagged on the OP proc, confirm it still holds here.
+   ============================================================ */
+CREATE TABLE #TEMPProcedures (
+	HSP_ACCOUNT_ID          bigint NOT NULL,
+	VisitProcedureSequence  int NULL,
+	CPT_CODE                varchar(20) NULL,
+	ProviderNPI             varchar(20) NULL,
+	PX_DATE                 datetime NULL
+);
 
 SET @sql = N'
-INSERT INTO #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID, CPT_CODE, SERVICE_DATE, QUANTITY, TX_AMOUNT)
-SELECT HSP_ACCOUNT_ID, UB_REV_CODE_ID, CPT_CODE, SERVICE_DATE, QUANTITY, TX_AMOUNT
-FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''' + REPLACE(@innerSql, '''', '''''') + N''')
+INSERT INTO #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence, CPT_CODE, ProviderNPI, PX_DATE)
+select
+	SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as HSP_ACCOUNT_ID
+	,p.VisitProcedureSequence
+	,p.VisitProcedureCode
+	,prov.ProviderNPI
+	,p.VisitProcedureDate
+from fact.VisitProcedures p
+	join fact.Accounts a on a.AccountID = p.VisitProcedureAccountID
+						 and a.AccountDataSourceID = 5
+	left join dim.Providers prov on prov.ProviderID = p.VisitProcedureProviderID
+	left join dim.locations l on l.LocationID = a.AccountLocationID
+						 and l.LocationDataSourceID = 5
+where p.VisitProcedureDataSourceID = 5
+	and p.VisitProcedureCodeType = ''CPT''
+	and a.AccountDateOfDischarge >= ''' + @startdateLit + N'''
+	and a.AccountDateOfDischarge <= ''' + @enddateLit + N'''
+	and a.AccountCodingStatus = ''Completed'' 
+	and a.AccountClass = ''Emergency'' 
+	and TRY_CAST(SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as bigint) >= 600000000
+	and a.AccountTotalCharges > 0
+	and a.AccountPatientID is not null
+	and l.LocationSourceID =''' + @locationLit + N'''
+	and (a.AccountFinancialClassID = ''5~4'' 
+		 or exists (select * from dim.PayerPlans pp
+					 where pp.PayerPlanName not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
+					   and pp.PayerPlanDataSourceID = 5
+					   and a.AccountPrimaryPayerPlanID = pp.PayerPlanID))
 ';
 EXEC sp_executesql @sql;
 
 CREATE INDEX IX_TEMPDx_AcctID           ON #TEMPDx (HSP_ACCOUNT_ID, LINE);
 CREATE INDEX IX_TEMPEcode_AcctID        ON #TEMPEcode (HSP_ACCOUNT_ID);
 CREATE INDEX IX_TEMPTransactions_AcctID ON #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID);
+CREATE INDEX IX_TEMPProcedures_AcctID   ON #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence);
 
 /* ============================================================
+
    5. Location lookup values - unchanged from original
    ============================================================ */
 DECLARE @LocationName varchar(100) = (SELECT case when @location = 43004001 then 'Community Hospital North'
@@ -410,7 +487,7 @@ DECLARE @Dt XML=
 					  when 10 then '04'
 					  when 09 then '02'
 					  when 30 then '02'
-					  else acct.PATIENT_STATUS_C
+					  else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
 						end as 'pat_disch_status',
 
 				 ( Select top (6)
@@ -437,7 +514,16 @@ DECLARE @Dt XML=
 						end  as 'prim_payer_name',
 
 				 case
-					  when acct.FINANCIAL_CLASS in (100,140,150,170,180,190,210,250,260,270,280,310)
+				 /* Payer-specific overrides must come first: several of these share a
+				    FINANCIAL_CLASS with a much broader payer group below, so without
+				    checking benefit_plan_id/payor_id up front, the financial-class
+				    branch further down would catch them first and mask the override. */
+				 when acct.BENEFIT_PLAN_ID in (1601901,1601902) then 5 /*Atlas / Centralink Bundled Payment*/
+				 when acct.BENEFIT_PLAN_ID = 1601904 or acct.PAYOR_ID = 10622 then 6 /*HPI Bundled Self Pay*/
+				 when acct.BENEFIT_PLAN_ID = 1800120 then 2 /*Mending Health*/
+				 when acct.BENEFIT_PLAN_ID in (1800112,1550109) then 7 /*Chickasaw Nation*/
+				 when acct.BENEFIT_PLAN_ID in (2400503,2400501) then 5 /*Department of Labor*/
+				 when acct.FINANCIAL_CLASS in (100,140,150,170,180,190,210,250,260,270,280,310)
 					  then 1 /*Commercial*/
 					  when acct.FINANCIAL_CLASS in (2,220,101)
 					  OR acct.BENEFIT_PLAN_ID in(2201104, 2201105) /*UHC Dual Complete*/
@@ -447,21 +533,17 @@ DECLARE @Dt XML=
 					  OR acct.BENEFIT_PLAN_ID in(3000113,4000113,4000203) /*Humana*/
 					  then 3 /*Medicaid*/
 					  when acct.FINANCIAL_CLASS in (6,230)
-					  OR acct.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401,3000113, 4000113)
+					  OR acct.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401)
 					  then 4 /*VA or Military*/
 					  when acct.FINANCIAL_CLASS = 240
 					  OR acct.BENEFIT_PLAN_ID in
 					  (1800103,1800106,1801701,2400427) /*Hobby Lobby mapped to work comp*/
 					  then 5 /*Work Comp*/
 					  When acct.FINANCIAL_CLASS = 311
-					  or acct.BENEFIT_PLAN_ID in
-					  (1601904) /*Self Pay*/
-					  or acct.PAYOR_ID in
-					  (10622) /*Self Pay*/
 					  then 6 /*Uninsured or Self Pay*/
 					  When acct.FINANCIAL_CLASS is null then 6 /*Uninsured or Self Pay*/
 					  when acct.FINANCIAL_CLASS = 160 and acct.PAYOR_NAME like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 6 /*Uninsured or Self Pay*/
-					  when (acct.FINANCIAL_CLASS in (160, 155) OR acct.BENEFIT_PLAN_ID in(1601903, 1601904,1602101,1550109,1600109,1800112)
+					  when (acct.FINANCIAL_CLASS in (160, 155) OR acct.BENEFIT_PLAN_ID in(1601903,1602101,1600109)
 					  ) and acct.PAYOR_NAME not like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 7
 					  else 7 end as 'prim_payer_class',
 
@@ -499,23 +581,21 @@ DECLARE @Dt XML=
 			(
 				select top (1)
 					case
-					when procs.CPT_CODE is null or Trim(procs.CPT_CODE) = '' or Trim(max(procs.CPT_CODE)) = '' or max(procs.cpt_code) is null
+					when procs.CPT_CODE is null or Trim(procs.CPT_CODE) = ''
 					then  '99999'
-					else max(procs.cpt_code)
+					else procs.CPT_CODE
 					end as 'princ_cpt_proc',
 					case
-					 when acct.AttendingNPI = '' then 'OTHOOO'
-					 else acct.AttendingNPI
+					 when procs.ProviderNPI = '' then 'OTHOOO'
+					 when procs.ProviderNPI is null then 'OTHOOO'
+					 else procs.ProviderNPI
 					end as 'princ_cpt_proc_phys_id',
-					convert(date,procs.SERVICE_DATE,100) as 'princ_cpt_proc_date'
+					convert(date,procs.PX_DATE,100) as 'princ_cpt_proc_date'
 
-				from #TEMPTransactions procs
+				from #TEMPProcedures procs
 
 				where acct.HSP_ACCOUNT_ID=procs.HSP_ACCOUNT_ID
-						and procs.UB_REV_CODE_ID = 450
-				and procs.CPT_CODE <> 'EDNOCHG'
-				group by
-				procs.CPT_CODE,procs.SERVICE_DATE
+					and procs.VisitProcedureSequence = 1
 
 				  for xml auto, type
 			),
@@ -576,6 +656,7 @@ IF OBJECT_ID('tempdb..#TEMPAccounts')     IS NOT NULL DROP TABLE #TEMPAccounts;
 IF OBJECT_ID('tempdb..#TEMPDx')           IS NOT NULL DROP TABLE #TEMPDx;
 IF OBJECT_ID('tempdb..#TEMPEcode')        IS NOT NULL DROP TABLE #TEMPEcode;
 IF OBJECT_ID('tempdb..#TEMPTransactions') IS NOT NULL DROP TABLE #TEMPTransactions;
+IF OBJECT_ID('tempdb..#TEMPProcedures')   IS NOT NULL DROP TABLE #TEMPProcedures;
 
 end
 GO
