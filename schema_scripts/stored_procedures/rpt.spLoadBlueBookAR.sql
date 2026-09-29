@@ -102,7 +102,6 @@ GROUP BY
     pt.PracticeID,
     t.BILLING_PROVIDER_ID
 
-	select * from rpt.ARCurrentPB
 
 
 /*--Old methodology that returns only current AR--
