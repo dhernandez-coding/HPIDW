@@ -30,9 +30,14 @@ from fact.Transactions2 t2
 	left join dim.vProviders pr ON pr.ProviderID = t2.TransactionBillingProviderID																	
 	left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = t2.TransactionCode	
 	--left join dim.vPatients pat on pat.PatientID = t2.PatientID																
-	left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 																	
+	
+	left join dim.vPBProcedureCategories cat ON cat.ProcedureCategory =  CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 																	
 																		  WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
 																		  ELSE c.ProcedureCodeCategory END
+
+	--left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 																	
+	--																	  WHEN c.ProcedureCodeIsLocationDependent = 1 and t2.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
+	--																	  ELSE c.ProcedureCodeCategory END --Replaced by Diego Hernandez
 	left join (select 																	
 				t2.TransactionDatasourceID
 				,t2.TransactionParentSourceID														

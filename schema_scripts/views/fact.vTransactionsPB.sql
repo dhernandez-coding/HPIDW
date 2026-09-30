@@ -8,6 +8,7 @@ Change Control:
 	3. 05/21/2025 - Eric Silvestri - Added TransactionIsDenial and TransactionDenialType
 	4. 10/28/2025 - Eric Silvestri - Added ICD10 codes
 	5. 6/2/2026 - Chris Cross - Replaced HPIApp.dbo.PBProcedureCategories with [HERO-DB].hpi.dbo.PBProcedureCategoriess to look at new HERO app
+	6. 9/29/2026 - Chris Cross - Replaced  [HERO-DB].hpi.dbo.PBProcedureCategoriess with dim.vPBProcedureCategories  to look at new HERO app
 */
 
 
@@ -251,9 +252,13 @@ FROM (
 		LEFT JOIN fact.Accounts a ON a.AccountID = t.TransactionAccountID -- for patient MRN 2/1/24 and employer 4/18/24
 		LEFT JOIN dim.Patients p ON p.PatientID = COALESCE(t.TransactionPatientID, a.AccountPatientID) -- for patient MRN 2/1/24
 		left join dim.vPBProcedureCodeCategories c ON c.ProcedureCode = COALESCE(t.TransactionCPTCode,t.TransactionCode) AND t.TransactionType = 'Charge'
-		left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
-																				WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
-																				ELSE c.ProcedureCodeCategory END
+		left join dim.vPBProcedureCategories cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures'
+                                                                          WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
+                                                                          ELSE c.ProcedureCodeCategory END
+	    -- Modified by Diego Hernandez: Pointing to the views managed by the app
+		--left join [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = CASE WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode in ('21','22') THEN 'Outpatient Procedures' 
+		--																		WHEN c.ProcedureCodeIsLocationDependent = 1 and t.TransactionPlaceOfServiceCode not in ('21','22') THEN 'In Office Procedures'
+		--																		ELSE c.ProcedureCodeCategory END
 		left join dim.DataSources ds ON t.TransactionDatasourceID = ds.DataSourceID
 		left join map.vProviderLinking pl ON pl.ChildProviderID = t.TransactionBillingProviderID AND NOT ( pl.ChildProviderID LIKE '18~%' OR pl.ChildProviderID LIKE '17~%') --Here for handle duplicates with THP Providers on APM
 		left join map.PracticeDepartments pd ON pd.DepartmentID = t.TransactionDepartmentID

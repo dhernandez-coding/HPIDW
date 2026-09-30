@@ -36,13 +36,21 @@ LEFT JOIN dim.PayerCategories pc ON pc.PayerCategoryID = p.PayerCategoryID
 LEFT JOIN dim.PayerGroups pg ON pg.PayerGroupID = p.PayerGroupID  
 LEFT JOIN dim.vProviders pr ON pr.ProviderID = t2.TransactionBillingProviderID  
 LEFT JOIN dim.Patients pp ON pp.PatientID = t2.PatientID  
-LEFT JOIN dim.vPBProcedureCodeCategories c ON c.ProcedureCode = t2.TransactionCode  
-LEFT JOIN [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = 
+LEFT JOIN dim.vPBProcedureCodeCategories c ON c.ProcedureCode = t2.TransactionCode
+
+LEFT JOIN dim.vPBProcedureCategories cat ON cat.ProcedureCategory =
+
     CASE 
         WHEN c.ProcedureCodeIsLocationDependent = 1 AND t2.TransactionPlaceOfServiceCode IN ('21','22') THEN 'Outpatient Procedures'  
         WHEN c.ProcedureCodeIsLocationDependent = 1 AND t2.TransactionPlaceOfServiceCode NOT IN ('21','22') THEN 'In Office Procedures' 
         ELSE c.ProcedureCodeCategory 
     END
+--LEFT JOIN [HERO-DB].hpi.dbo.PBProcedureCategoriess cat ON cat.ProcedureCategory = 
+--    CASE 
+--        WHEN c.ProcedureCodeIsLocationDependent = 1 AND t2.TransactionPlaceOfServiceCode IN ('21','22') THEN 'Outpatient Procedures'  
+--        WHEN c.ProcedureCodeIsLocationDependent = 1 AND t2.TransactionPlaceOfServiceCode NOT IN ('21','22') THEN 'In Office Procedures' 
+--        ELSE c.ProcedureCodeCategory 
+--    END
 LEFT JOIN PaymentAggregation pa ON pa.TransactionDatasourceID = t2.TransactionDatasourceID 
     AND pa.TransactionParentSourceID = t2.TransactionSourceID  
 WHERE t2.TransactionBillingType = 'PB'  

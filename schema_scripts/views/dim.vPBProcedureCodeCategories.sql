@@ -1,41 +1,23 @@
 CREATE View [dim].[vPBProcedureCodeCategories]
 as
 
-SELECT 
-	c.ProcedureCode as ProcedureCode
-	,pc.ProcedureCategory as ProcedureCodeCategory
-	,pc.ProcedureCategoryVisitType as ProcedureCodeSubCategory
-	,sl.ServiceLineName as ProcedureCodeServiceLine
-	,c.ProcedureCodeIsLocationDependent as ProcedureCodeIsLocationDependent
-	,pc.ProcedureCategoryPriority as ProcedureCodePriority
-	,dhs.DHSCategoryName as ProcedureCodeDHSCategory
-	,Case When c.ProcedureCodeInPlay = 1 Then 'Y' else 'N' End as ProcedureCodeInPlay
-	,Case When c.ProcedureCodeTHPLab = 1 Then 'Y' else 'N' End as ProcedureCodeTHPLab
-	,c.ModifiedDate
-	,c.ModifiedBy
-FROM [HERO-DB].hpi.dbo.PBProcedureCodess c 
-	left join [HERO-DB].hpi.dbo.PBProcedureCategoriess pc ON pc.id = c.ProcedureCodeCategoryID
-	left join [HERO-DB].hpi.dbo.ServiceLiness sl ON sl.ServiceLineid = c.ProcedureCodeServiceLineId
-	left join [HERO-DB].hpi.dbo.DHSCategoriess dhs ON dhs.DHSCategoryID = c.ProcedureCodeDHSCategoryId
-WHERE 1=1
-	AND c.ProcedureCodeCategoryID is not null
 
-/*Old PowerApp-based mapping query replaced on 6/2/2026:
-
-Select 
-	pc.ProcedureCode
-	,pcc.ProcedureCategory as ProcedureCodeCategory
-	,pcc.ProcedureCategoryVisitType as ProcedureCodeSubCategory
-	,sl.ServiceLineName as ProcedureCodeServiceLine
-	,pc.ProcedureCodeIsLocationDependent as ProcedureCodeIsLocationDependent
-	,pcc.ProcedureCategoryPriority as ProcedureCodePriority
-	,dhsc.DHSCategoryName as ProcedureCodeDHSCategory
-	,Case When pc.ProcedureCodeInPlay = 1 Then 'Y' else 'N' End as ProcedureCodeInPlay
-	,Case When pc.ProcedureCodeTHPLab = 1 Then 'Y' else 'N' End as ProcedureCodeTHPLab
-From HPIAPP.dbo.PbProcedureCodes pc
-	Left Join HPIApp.dbo.PBProcedureCategories pcc on pc.ProcedureCodeCategoryId = pcc.Id
-	Left Join HPIApp.dbo.ServiceLines sl on pc.ProcedureCodeServiceLineId = sl.ServiceLineID
-	left join HPIApp.dbo.DHSCategories dhsc on pc.ProcedureCodeDHSCategoryId = dhsc.DHSCategoryID
---order by ProcedureCode
-*/
+-- 9/29/2026 - Repointed from [HERO-DB] to the app-maintained dim.PBProcedure* tables (through the dim.v* views
+-- above, the same joins the EPIC fact load uses). Same output columns and the same "mapped codes only" filter.
+SELECT c.ProcedureCode                                AS ProcedureCode
+      ,pc.ProcedureCategory                           AS ProcedureCodeCategory
+      ,pc.ProcedureCategoryVisitType                  AS ProcedureCodeSubCategory
+      ,sl.ServiceLineName                             AS ProcedureCodeServiceLine
+      ,c.ProcedureCodeIsLocationDependent             AS ProcedureCodeIsLocationDependent
+      ,pc.ProcedureCategoryPriority                   AS ProcedureCodePriority
+      ,dhs.DHSCategoryName                            AS ProcedureCodeDHSCategory
+      ,CASE WHEN c.ProcedureCodeInPlay = 1 THEN 'Y' ELSE 'N' END AS ProcedureCodeInPlay
+      ,CASE WHEN c.ProcedureCodeTHPLab = 1 THEN 'Y' ELSE 'N' END AS ProcedureCodeTHPLab
+      ,c.ModifiedDate
+      ,c.ModifiedBy
+FROM dim.vPBProcedureCodes c
+    LEFT JOIN dim.vPBProcedureCategories pc ON pc.Id = c.ProcedureCodeCategoryId
+    LEFT JOIN dim.vServiceLines sl ON sl.ServiceLineID = c.ProcedureCodeServiceLineId
+    LEFT JOIN dim.vDHSCategories dhs ON dhs.DHSCategoryID = c.ProcedureCodeDHSCategoryId
+WHERE c.ProcedureCodeCategoryId IS NOT NULL
 GO
