@@ -166,5 +166,32 @@ UPDATE map.PBAdjustmentCodes SET PBAdjustmentCodeCategory = '2_Contractual Adjus
 UPDATE map.PBAdjustmentCodes SET PBAdjustmentCodeCategory = '5_Payer Receipts', PBAdjustmentCodeUpdatedDatetime = GETDATE() WHERE PBAdjustmentCodeID = '1~PHYDEPO'
 UPDATE map.PBAdjustmentCodes SET PBAdjustmentCodeCategory = '6_Patient Receipts', PBAdjustmentCodeUpdatedDatetime = GETDATE() WHERE PBAdjustmentCodeID = '1~UHCINCA'
 
---select * from map.PBAdjustmentCodes
+/*9.30.2026 - Chris Cross added new codes from SOS*/
+INSERT INTO map.PBAdjustmentCodes SELECT '5~187512',' DEN -  REGISTRATION ERROR - ','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3015',' FB/WO PLB DEBIT ADJUSTMENT  ','',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~301604',' ALLSET SECONDARY PAYER FORMAT ADJUSTMENT  ','',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3018',' DEN  -  TIMELY CHARGING ERROR - DEPT','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3020',' TOO OLD TO BILL PATIENT','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3099',' EXPECTED PAYER CONTRACTUAL WRITE-OFF (INSURANCE) - ','2_Contractual Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3102',' DEN - NO AUTHORIZATION NOT ATTEMPTED','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3104',' DEN - PROC IS INCONSISTENT WITH MOD','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3111',' DEN - DIAGNOSIS INCONSISTENT WITH PROCEDURE','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3115',' DEN - AUTH/PRECERT RELATED','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3118',' DEN - NO AUTH - ADDON PROCEDURE (NAAP)','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3120',' DEN - NUMBER OF VISITS/OTHER PROVIDER SAME DATE OF SERVICE','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3123',' DEN - NO AUTH - DOS OUTSIDE ORIGINAL AUTH (NADE)','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3127',' DEN - TIMELY ELIGIBILITY/INCORRECT INSURANCE - ','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3129',' DEN - TIMELY CLAIM NOT FILED - ','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3131',' DEN - NO AUTH - PHYSICIAN NOTIFY / CLINICAL NOT DONE (NAPNC)','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3135',' DEN - BENEFITS EXHAUSTED','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3137',' DEN - SECONDARY INSURANCE NOT BILLED/APPEALED TIMELY - ','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3139',' DEN - MODIFIER INCONSISTENT WITH AUTHORIZATION','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3151',' DEN - SERVICES EXCEED PAYER GUIDELINES','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3155',' DEN - MED POL/PROC DEEMED EXPERIMENTAL/NOT APRVD BY FDA','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3165',' DEN - NO REFERRAL/EXCEEDED/REF PRVDR NOT ELIG TO REFER','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~3185',' DEN - PROVIDER NOT ELIG/CERTIFIED','4_Payer Determination Adjustment',GETDATE()
+INSERT INTO map.PBAdjustmentCodes SELECT '5~5021',' WRITE-OFF (UNCOLLECTIBLE DENIAL)','4_Payer Determination Adjustment',GETDATE()
+
+
+--select PBAdjustmentCodeID, count(1) ct from map.PBAdjustmentCodes group by PBAdjustmentCodeID order by ct desc
 GO
