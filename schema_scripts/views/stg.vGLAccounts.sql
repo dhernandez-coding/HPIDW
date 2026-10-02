@@ -29,8 +29,10 @@ select
 	,CASE WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '41' THEN '02_X-ray Expense'
 		  WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '51' THEN '02_Lab Expense'
 		  ELSE CONCAT(RIGHT(CONCAT('00',rg.GLAccountReportGroupLevel1Sort),2),'_',rg.GLAccountReportGroupLevel1) END as GLAccountReportGroupLevel1
+	/*Chris Cross - 10/1/26 - Added conditional logic to separate DME expense based on type due to 5300-31 accounts*/
 	,CASE WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '41' THEN '08_X-ray Expense'
 		  WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '51' THEN '08_Lab Expense'
+		  WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '31' THEN '07_DME Expense'
 		  ELSE CONCAT(RIGHT(CONCAT('00',rg.GLAccountReportGroupLevel2Sort),2),'_',rg.GLAccountReportGroupLevel2) END as GLAccountReportGroupLevel2
 	
 	,CASE WHEN LEFT(i.ACTNUMST,1) = '5' AND a.ACTNUMBR_2 = '41' THEN '02_Ancillary Service Expenses' --4.16.26 - Chris - maybe switch this to 02_Ancillary Service Expenses for Board Packet?
