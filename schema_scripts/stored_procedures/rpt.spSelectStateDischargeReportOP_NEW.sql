@@ -12,7 +12,7 @@ AS BEGIN
 SET NOCOUNT ON;
 
 --DECLARE @startdate datetime = '2026-01-01'
---DECLARE @enddate datetime = '2026-01-31'
+--DECLARE @enddate datetime = '2026-08-31'
 SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
 SET @enddate   = IsNull(@enddate,   DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
 
@@ -216,7 +216,7 @@ select
 from [CLARITY].[ORGFILTER].V_CODING_ALL_DX_PX_LIST ecode
 	join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = ecode.HSP_ACCOUNT_ID
 where ecode.SOURCE_name = ''External Cause of Injury Primary Code Set''
-	and ' + @accountFilterSql + N'
+
 ';
 
 SET @sql = N'
