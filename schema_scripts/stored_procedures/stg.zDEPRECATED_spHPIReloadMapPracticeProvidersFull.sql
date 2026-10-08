@@ -732,7 +732,19 @@ UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, Pract
 /*9.17.26 - Per Michael - Updates to WDM - Add Wendy D. McConnell*/
 INSERT INTO map.PracticeProviders SELECT '0~WDM','5~109359','WDM',1,'9/21/2026','12/31/2099',1,getdate(),1,1,null,1,0,NULL,NULL,NULL,NULL
 
-	select * from map.vPracticeProviders p where p.PracticeID like '0~SCS%'
+/*10.7.26 - Per Michael - Updates to PBJ - Remove Lloyd Dunkleberger from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~PBJ' and ProviderID = '1~18356'
+
+/*10.7.26 - Per Michael - Updates to DDR - Remove Tanja Pittman from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~DDR' and ProviderID = '1~20343'
+
+/*10.7.26 - Per Michael - Updates to AKM - Remove Taylor Fitzpatrick from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~AKM' and ProviderID = '1~19895'
+
+/*10.7.26 - Per Michael - Updates to MEC - Remove Amber Meiwes from Blue Book*/
+UPDATE map.PracticeProviders SET PracticeProviderAllocationPercent = NULL, PracticeProviderFTE = null, PracticeProviderGLProviderID = '000', PracticeProviderUpdatedDatetime = getdate() WHERE PracticeID = '0~MEC' and ProviderID = '1~19087'
+
+	select * from map.vPracticeProviders p where p.PracticeID like '0~MEC%'
 	
 	select * from map.vPracticeProviders p where p.ProviderFullName like '%McConnell%'
 	select * from dim.Practices p where p.PracticeName like '%MARX%'

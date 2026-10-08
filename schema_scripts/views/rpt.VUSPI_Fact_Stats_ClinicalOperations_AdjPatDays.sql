@@ -1,4 +1,4 @@
-CREATE VIEW [rpt].[VUSPI_Fact_Stats_ClinicalOperations] AS
+CREATE VIEW [rpt].[VUSPI_Fact_Stats_ClinicalOperations_AdjPatDays] AS
 
 
 /*Patient Days - added by Chris Cross on 10/6/2026*/
@@ -7,7 +7,7 @@ WITH CTE_DailyPatientDays AS (
 		a.AccountLocationID as facility_id
 		,l.LocationName as facility_name
 		,d.Date as service_date
-		,'Clincial Operations' as master_department
+		,'Clinical Operations' as master_department
 		,'' as sub_department
 		--, CASE 
 		--	WHEN a.AccountClass = 'Inpatient' THEN 'Inpatient'

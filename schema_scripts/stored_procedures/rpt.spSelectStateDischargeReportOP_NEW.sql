@@ -545,7 +545,10 @@ DECLARE @Dt XML=
 				  when 10 then '04'
 				  when 09 then '02'
 				  when 30 then '02'
-				  else acct.PATIENT_STATUS_C
+				  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
+								then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+								else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+						   end
 					end as 'pat_disch_status',
 
 			 ( Select top (6)

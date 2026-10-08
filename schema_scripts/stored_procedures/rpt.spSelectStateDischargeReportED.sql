@@ -1,36 +1,377 @@
-CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED] 
- @startdate datetime null= null,
- @enddate datetime null= null,
+/*
+================================================================================
+ REWRITE NOTES - spSelectStateDischargeReportED (read before deploying)
+================================================================================
+ Same pattern as the OP and IP rewrites: replace per-account correlated
+ linked-server subqueries with bulk OPENQUERY pulls into local temp tables,
+ scoped by a shared filter clause built once and reused (not a giant
+ account-ID list - that hit OPENQUERY's 8000-character limit on the OP proc).
+
+ This proc is structurally almost identical to the OP proc: same source
+ tables for diagnoses (HSP_ACCT_DX_LIST + clarity_edg), ecode
+ (V_CODING_ALL_DX_PX_LIST), and procedures/charges (HSP_TRANSACTIONS).
+ Differences from OP/IP that shaped this rewrite:
+   - ACCT_BASECLS_HA_C = 3 (Emergency), submission_type = 'E'.
+   - prim_payer_class has one extra branch not present in OP/IP:
+     "WHEN epm.FINANCIAL_CLASS IS NULL THEN 6" - kept.
+   - Self-pay exclusion list has 6 entries (matches OP, not IP's 7 -
+     IP adds 'INTEGRIS MIAMI HOSPICE').
+   - drg (clarity_drg) is joined but the 'drg' output field is commented
+     out in the original - genuinely dead here, unlike IP where it's
+     used. Dropped.
+   - BIRTH_WEIGHT is likewise joined/available but commented out in the
+     original - not pulled.
+   - ZC_MC_ADM_SOURCE (zcadmin), PAT_ENC_HSP (enc), CLARITY_DEP (dep),
+     and ZC_DX_POA (pos) are all joined but never referenced in any live
+     output column - dropped as dead, same category of finding as the
+     OP/IP rewrites.
+   - princ_cpt_proc has a few extra null/blank guards compared to OP's
+     version (Trim(...) = '' checks in addition to IS NULL) - preserved
+     exactly.
+   - Same two latent type-mixing bugs as OP/IP, fixed the same way:
+     'point_origin' and 'pat_disch_status' mix string literals with a
+     raw int column across CASE branches, which silently resolves the
+     whole expression to int by SQL Server's type precedence rules.
+     Explicit CONVERT(varchar(10), ...) added to the else branches.
+   - Same HSP_ACCOUNT_ID / PAT_ID legacy alpha-prefix issue as the other
+     two procs: TRY_CAST guard on the >= 600000000 filter, PAT_ID
+     declared varchar rather than int.
+   - 'pat_gender', 'pat_race', and 'pat_marital_stat' have no ELSE
+     branch in the original - an unmapped or NULL source code silently
+     produces NULL rather than a fallback value. Left as-is, flagging
+     in case that's not intentional (same note as IP).
+
+ Verify before running against production:
+   - Column types in the CREATE TABLE statements are reasonable guesses;
+     check against the real Clarity DDL.
+================================================================================
+*/
+
+CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED]
+ @startdate datetime = null,
+ @enddate datetime = null,
  @Location int = 43004001 --HPI CHN
---DECLARE @startdate datetime = '3/1/2025'
---DECLARE @enddate datetime = '4/1/2025'
---DECLARE @reportingyear int = YEAR(@startdate)
---DECLARE @reportingperiod int = MONTH(@startdate)
---DECLARE @Location int = 43004001 --HPI CHN
-						--43005005 --HPI CHS
-						--43006001 --HPI NWSH
-						as begin
-DECLARE @reportingyear int = YEAR(@startdate)
-DECLARE @reportingperiod int = MONTH(@startdate)
+ 	--43005005 --HPI CHS
+	--43006001 --HPI NWSH
+as begin
+
+SET NOCOUNT ON;
+
+SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
+SET @enddate   = IsNull(@enddate,   DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
+
+DECLARE @reportingyear   int = YEAR(@startdate);
+DECLARE @reportingperiod int = MONTH(@startdate);
+
+/* ============================================================
+   0. Cleanup from any prior run in this session
+   ============================================================ */
+IF OBJECT_ID('tempdb..#TEMPAccounts')     IS NOT NULL DROP TABLE #TEMPAccounts;
+IF OBJECT_ID('tempdb..#TEMPDx')           IS NOT NULL DROP TABLE #TEMPDx;
+IF OBJECT_ID('tempdb..#TEMPEcode')        IS NOT NULL DROP TABLE #TEMPEcode;
+IF OBJECT_ID('tempdb..#TEMPTransactions') IS NOT NULL DROP TABLE #TEMPTransactions;
+IF OBJECT_ID('tempdb..#TEMPProcedures')   IS NOT NULL DROP TABLE #TEMPProcedures;
+
+/* ============================================================
+   1. #TEMPAccounts
+      Bulk replacement for the old driving join. Pushes the date
+      range, location, coding status, base class (ED = 3), and
+      self-pay/plan-exclusion filters down to the remote server via
+      dynamic SQL, so only qualifying accounts cross the wire.
+   ============================================================ */
+CREATE TABLE #TEMPAccounts (
+	HSP_ACCOUNT_ID      bigint       NOT NULL,
+	PAT_ID              varchar(20)  NULL,
+	DISCH_LOC_ID        int          NULL,
+	ADM_DATE_TIME       datetime     NULL,
+	DISCH_DATE_TIME     datetime     NULL,
+	ADMISSION_SOURCE_C  int          NULL,
+	ADMISSION_TYPE_C    int          NULL,
+	PATIENT_STATUS_C    int          NULL,
+	TOT_CHGS            decimal(18,2) NULL,
+	PAT_MIDDLE_NAME     nvarchar(50) NULL,
+	PAT_LAST_NAME       nvarchar(50) NULL,
+	PAT_FIRST_NAME      nvarchar(50) NULL,
+	ADD_LINE_1          nvarchar(100) NULL,
+	CITY                nvarchar(50) NULL,
+	ZIP                 nvarchar(10) NULL,
+	SEX_C               int          NULL,
+	BIRTH_DATE          datetime     NULL,
+	SSN                 varchar(20)  NULL,
+	PAT_MRN_ID          nvarchar(20) NULL,
+	MARITAL_STATUS_C    int          NULL,
+	ETHNIC_GROUP_C      int          NULL,
+	StateAbbr           varchar(5)   NULL,
+	PATIENT_RACE_C      int          NULL,
+	FINANCIAL_CLASS     int          NULL,
+	PAYOR_NAME          nvarchar(100) NULL,
+	PAYOR_ID            int          NULL,
+	BENEFIT_PLAN_NAME   nvarchar(100) NULL,
+	BENEFIT_PLAN_ID     int          NULL,
+	AttendingNPI        varchar(20)  NULL
+);
+
+DECLARE @startdateLit varchar(8)  = CONVERT(varchar(8), @startdate, 112); -- YYYYMMDD, unambiguous
+DECLARE @enddateLit   varchar(8)  = CONVERT(varchar(8), @enddate, 112);
+DECLARE @locationLit  varchar(20) = CAST(@Location AS varchar(20));
+DECLARE @innerSql nvarchar(max);
+DECLARE @sql      nvarchar(max);
+
+/* Shared account-qualifying filter, reused (joined to HSP_ACCOUNT hsp)
+   in every remote pull below - not a spliced-in account-ID list, since
+   that hit OPENQUERY's 8000-character limit on the OP proc. */
+DECLARE @accountFilterSql nvarchar(max) = N'
+	hsp.DISCH_DATE_TIME >= ''' + @startdateLit + N'''
+	and hsp.DISCH_DATE_TIME <= ''' + @enddateLit + N'''
+	and hsp.CODING_STATUS_C = 4
+	and hsp.ACCT_BASECLS_HA_C = 3
+	and TRY_CAST(hsp.HSP_ACCOUNT_ID as bigint) >= 600000000
+	and hsp.TOT_CHGS > 0
+	and hsp.pat_id is not null
+	and hsp.DISCH_LOC_ID = ' + @locationLit + N'
+	and (hsp.ACCT_FIN_CLASS_C = 4
+		 or exists (select * from [CLARITY].[ORGFILTER].clarity_epp epp1
+					 where epp1.BENEFIT_PLAN_NAME not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
+					   and hsp.PRIMARY_PLAN_ID = epp1.BENEFIT_PLAN_ID))
+';
+
+SET @innerSql = N'
+select
+	hsp.HSP_ACCOUNT_ID, hsp.PAT_ID, hsp.DISCH_LOC_ID, hsp.ADM_DATE_TIME, hsp.DISCH_DATE_TIME,
+	hsp.ADMISSION_SOURCE_C, hsp.ADMISSION_TYPE_C, hsp.PATIENT_STATUS_C, hsp.TOT_CHGS,
+	p.PAT_MIDDLE_NAME, p.PAT_LAST_NAME, p.PAT_FIRST_NAME, p.ADD_LINE_1, p.CITY, p.ZIP, p.SEX_C,
+	p.BIRTH_DATE, p.SSN, p.PAT_MRN_ID, p.MARITAL_STATUS_C, p.ETHNIC_GROUP_C,
+	st.ABBR as StateAbbr, r.PATIENT_RACE_C,
+	epm.FINANCIAL_CLASS, epm.PAYOR_NAME, epm.PAYOR_ID,
+	epp.BENEFIT_PLAN_NAME, epp.BENEFIT_PLAN_ID,
+	ser2.NPI as AttendingNPI
+from [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp
+	left join [CLARITY].[ORGFILTER].PATIENT p on hsp.PAT_ID = p.PAT_ID
+	left join [CLARITY].[ORGFILTER].ZC_STATE st on st.STATE_C = p.STATE_C
+	left join [CLARITY].[ORGFILTER].PATIENT_RACE r on r.PAT_ID = p.PAT_ID and r.LINE = 1
+	left join [CLARITY].[ORGFILTER].CLARITY_EPM epm on epm.PAYOR_ID = hsp.PRIMARY_PAYOR_ID
+	left join [CLARITY].[ORGFILTER].clarity_epp epp on epp.BENEFIT_PLAN_ID = hsp.PRIMARY_PLAN_ID
+	left join [CLARITY].[ORGFILTER].clarity_ser_2 ser2 on ser2.PROV_ID = hsp.ATTENDING_PROV_ID
+where ' + @accountFilterSql + N'
+';
+
+SET @sql = N'
+INSERT INTO #TEMPAccounts (
+	HSP_ACCOUNT_ID, PAT_ID, DISCH_LOC_ID, ADM_DATE_TIME, DISCH_DATE_TIME,
+	ADMISSION_SOURCE_C, ADMISSION_TYPE_C, PATIENT_STATUS_C, TOT_CHGS,
+	PAT_MIDDLE_NAME, PAT_LAST_NAME, PAT_FIRST_NAME, ADD_LINE_1, CITY, ZIP, SEX_C,
+	BIRTH_DATE, SSN, PAT_MRN_ID, MARITAL_STATUS_C, ETHNIC_GROUP_C,
+	StateAbbr, PATIENT_RACE_C,
+	FINANCIAL_CLASS, PAYOR_NAME, PAYOR_ID,
+	BENEFIT_PLAN_NAME, BENEFIT_PLAN_ID,
+	AttendingNPI
+)
+SELECT
+	HSP_ACCOUNT_ID, PAT_ID, DISCH_LOC_ID, ADM_DATE_TIME, DISCH_DATE_TIME,
+	ADMISSION_SOURCE_C, ADMISSION_TYPE_C, PATIENT_STATUS_C, TOT_CHGS,
+	PAT_MIDDLE_NAME, PAT_LAST_NAME, PAT_FIRST_NAME, ADD_LINE_1, CITY, ZIP, SEX_C,
+	BIRTH_DATE, SSN, PAT_MRN_ID, MARITAL_STATUS_C, ETHNIC_GROUP_C,
+	StateAbbr, PATIENT_RACE_C,
+	FINANCIAL_CLASS, PAYOR_NAME, PAYOR_ID,
+	BENEFIT_PLAN_NAME, BENEFIT_PLAN_ID,
+	AttendingNPI
+FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''' + REPLACE(@innerSql, '''', '''''') + N''')
+';
+
+EXEC sp_executesql @sql;
+
+CREATE INDEX IX_TEMPAccounts_AcctID ON #TEMPAccounts (HSP_ACCOUNT_ID);
+
+/* ============================================================
+   2. #TEMPDx
+      Replaces the old princ_diag / oth_diag_code correlated
+      subqueries (HSP_ACCT_DX_LIST joined to clarity_edg).
+   ============================================================ */
+CREATE TABLE #TEMPDx (
+	HSP_ACCOUNT_ID    bigint NOT NULL,
+	LINE              int NULL,
+	current_icd10_list nvarchar(20) NULL
+);
+
+SET @innerSql = N'
+select
+	diag.HSP_ACCOUNT_ID, diag.LINE, dx.current_icd10_list
+from [CLARITY].[ORGFILTER].[HSP_ACCT_DX_LIST] diag
+	join [CLARITY].[ORGFILTER].clarity_edg dx on dx.dx_id = diag.dx_id
+	join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = diag.HSP_ACCOUNT_ID
+where ' + @accountFilterSql + N'
+';
+
+SET @sql = N'
+INSERT INTO #TEMPDx (HSP_ACCOUNT_ID, LINE, current_icd10_list)
+SELECT HSP_ACCOUNT_ID, LINE, current_icd10_list
+FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''' + REPLACE(@innerSql, '''', '''''') + N''')
+';
+EXEC sp_executesql @sql;
+
+/* ============================================================
+   3. #TEMPEcode
+      Replaces the old ecode correlated subquery
+      (V_CODING_ALL_DX_PX_LIST). The ZC_DX_POA join in the
+      original was never referenced in the output - dropped,
+      same as the OP proc's equivalent join.
+   ============================================================ */
+CREATE TABLE #TEMPEcode (
+	HSP_ACCOUNT_ID bigint NOT NULL,
+	LINE           int NULL,
+	ref_bill_code  nvarchar(20) NULL
+);
+
+SET @innerSql = N'
+select
+	ecode.HSP_ACCOUNT_ID, ecode.LINE, ecode.ref_bill_code
+from [CLARITY].[ORGFILTER].V_CODING_ALL_DX_PX_LIST ecode
+	join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = ecode.HSP_ACCOUNT_ID
+where ecode.SOURCE_name = ''External Cause of Injury Primary Code Set''
+	and ' + @accountFilterSql + N'
+';
+
+SET @sql = N'
+INSERT INTO #TEMPEcode (HSP_ACCOUNT_ID, LINE, ref_bill_code)
+SELECT HSP_ACCOUNT_ID, LINE, ref_bill_code
+FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''' + REPLACE(@innerSql, '''', '''''') + N''')
+';
+EXEC sp_executesql @sql;
+
+/* ============================================================
+   4. #TEMPTransactions
+      Rewritten to pull from the internal warehouse (fact.Transactions2)
+      instead of OPENQUERY against Clarity - same conversion already
+      applied to the OP proc. Transactions and procedures are pulled
+      separately (see #TEMPProcedures below): joining VisitProcedures
+      to Transactions at the account level (rather than a true
+      transaction-line key) caused a join fan-out that inflated the
+      charge totals, so this table stays transaction-data-only.
+      AccountClass = 'Emergency' confirmed against fact.Accounts
+      (distinct values: Emergency, Inpatient, Outpatient).
+   ============================================================ */
+CREATE TABLE #TEMPTransactions (
+	HSP_ACCOUNT_ID  bigint NOT NULL,
+	UB_REV_CODE_ID  int NULL,
+	SERVICE_DATE    datetime NULL,
+	QUANTITY        decimal(18,2) NULL,
+	TX_AMOUNT       decimal(18,2) NULL
+);
+
+SET @sql = N'
+INSERT INTO #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID, SERVICE_DATE, QUANTITY, TX_AMOUNT)
+select
+	SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID)) as HSP_ACCOUNT_ID
+	,t.TransactionRevenueCode as UB_REV_CODE_ID
+	,t.TransactionDateOfService as SERVICE_DATE
+	,t.TransactionUnits as QUANTITY
+	,sum(t.TransactionAmount) as TX_AMOUNT
+from fact.Transactions2 t
+	left join fact.Accounts a on a.AccountID = t.TransactionAccountID
+								and a.AccountDataSourceID = 5
+	left join dim.locations l on l.LocationID = a.AccountLocationID
+								and l.LocationDataSourceID = 5
+where t.TransactionDatasourceID = 5
+	and t.TransactionRevenueCode is not null 
+	and a.AccountDateOfDischarge >= ''' + @startdateLit + N'''
+	and a.AccountDateOfDischarge <= ''' + @enddateLit + N'''
+	and a.AccountCodingStatus = ''Completed'' 
+	and a.AccountClass = ''Emergency'' 
+	and TRY_CAST(SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID)) as bigint) >= 600000000
+	and a.AccountTotalCharges > 0
+	and a.AccountPatientID is not null
+	and l.LocationSourceID =''' + @locationLit + N'''
+	and (a.AccountFinancialClassID = ''5~4'' 
+		 or exists (select * from dim.PayerPlans pp
+					 where pp.PayerPlanName not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
+					   and pp.PayerPlanDataSourceID = 5
+					   and a.AccountPrimaryPayerPlanID = pp.PayerPlanID))
+group by
+	SUBSTRING(t.TransactionAccountID, CHARINDEX(''~'', t.TransactionAccountID) + 1, LEN(t.TransactionAccountID))
+	,t.TransactionRevenueCode 
+	,t.TransactionDateOfService 
+	,t.TransactionUnits
+';
+EXEC sp_executesql @sql;
+
+/* ============================================================
+   4b. #TEMPProcedures
+       Same split as OP: procedure codes pulled independently from
+       fact.VisitProcedures, keyed by VisitProcedureSequence (a real,
+       deterministic order), with the performing provider's NPI
+       resolved via dim.Providers rather than defaulting every
+       procedure to the account's AttendingNPI.
+       Filtered to VisitProcedureCodeType = 'CPT' - same assumption
+       flagged on the OP proc, confirm it still holds here.
+   ============================================================ */
+CREATE TABLE #TEMPProcedures (
+	HSP_ACCOUNT_ID          bigint NOT NULL,
+	VisitProcedureSequence  int NULL,
+	CPT_CODE                varchar(20) NULL,
+	ProviderNPI             varchar(20) NULL,
+	PX_DATE                 datetime NULL
+);
+
+SET @sql = N'
+INSERT INTO #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence, CPT_CODE, ProviderNPI, PX_DATE)
+select
+	SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as HSP_ACCOUNT_ID
+	,p.VisitProcedureSequence
+	,p.VisitProcedureCode
+	,prov.ProviderNPI
+	,p.VisitProcedureDate
+from fact.VisitProcedures p
+	join fact.Accounts a on a.AccountID = p.VisitProcedureAccountID
+						 and a.AccountDataSourceID = 5
+	left join dim.Providers prov on prov.ProviderID = p.VisitProcedureProviderID
+	left join dim.locations l on l.LocationID = a.AccountLocationID
+						 and l.LocationDataSourceID = 5
+where p.VisitProcedureDataSourceID = 5
+	and p.VisitProcedureCodeType = ''CPT''
+	and a.AccountDateOfDischarge >= ''' + @startdateLit + N'''
+	and a.AccountDateOfDischarge <= ''' + @enddateLit + N'''
+	and a.AccountCodingStatus = ''Completed'' 
+	and a.AccountClass = ''Emergency'' 
+	and TRY_CAST(SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as bigint) >= 600000000
+	and a.AccountTotalCharges > 0
+	and a.AccountPatientID is not null
+	and l.LocationSourceID =''' + @locationLit + N'''
+	and (a.AccountFinancialClassID = ''5~4'' 
+		 or exists (select * from dim.PayerPlans pp
+					 where pp.PayerPlanName not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
+					   and pp.PayerPlanDataSourceID = 5
+					   and a.AccountPrimaryPayerPlanID = pp.PayerPlanID))
+';
+EXEC sp_executesql @sql;
+
+CREATE INDEX IX_TEMPDx_AcctID           ON #TEMPDx (HSP_ACCOUNT_ID, LINE);
+CREATE INDEX IX_TEMPEcode_AcctID        ON #TEMPEcode (HSP_ACCOUNT_ID);
+CREATE INDEX IX_TEMPTransactions_AcctID ON #TEMPTransactions (HSP_ACCOUNT_ID, UB_REV_CODE_ID);
+CREATE INDEX IX_TEMPProcedures_AcctID   ON #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence);
+
+/* ============================================================
+
+   5. Location lookup values - unchanged from original
+   ============================================================ */
 DECLARE @LocationName varchar(100) = (SELECT case when @location = 43004001 then 'Community Hospital North'
 												  when @location = 43005005 then 'Community Hospital South'
-												  when @location = 43006001 then 'Northwest Surgical Hospital' end)
+												  when @location = 43006001 then 'Northwest Surgical Hospital' end);
 DECLARE @LocationAddress varchar(100) = (SELECT case when @location = 43004001 then '3100 SW 89th Street'
 												  when @location = 43005005 then '3100 SW 89th Street'
-												  when @location = 43006001 then '9204 North May' end)
+												  when @location = 43006001 then '9204 North May' end);
 DECLARE @LocationCity varchar(100) = (SELECT case when @location = 43004001 then 'OKC'
 												  when @location = 43005005 then 'OKC'
-												  when @location = 43006001 then 'OKC' end)
+												  when @location = 43006001 then 'OKC' end);
 DECLARE @LocationZip varchar(100) = (SELECT case when @location = 43004001 then '73159'
 												  when @location = 43005005 then '73159'
-												  when @location = 43006001 then '73120' end)
+												  when @location = 43006001 then '73120' end);
 DECLARE @LocationMedicareNumber varchar(100) = (SELECT case when @location = 43004001 then '370203'
 												  when @location = 43005005 then '370203'
-												  when @location = 43006001 then '370192' end)
+												  when @location = 43006001 then '370192' end);
 
-
-
-/*Header XML*/
+/* ============================================================
+   6. Header XML - unchanged from original
+   ============================================================ */
 DECLARE @Hd XML=
 	(
 	SELECT
@@ -50,429 +391,322 @@ DECLARE @Hd XML=
 			'OK' as 'state',
 			@LocationZip as 'zip'
 		for xml path('contact_person'), type
-		) --as 'contact_person'
+		)
 	for XML Path('header'), TYPE
-	)
+	);
 
-/*Detail XML*/
+/* ============================================================
+   7. Detail XML - same output shape as the original, but every
+      correlated remote reference now points at a local temp table.
+   ============================================================ */
 DECLARE @Dt XML=
 	(
-
 	SELECT
 		(
 			SELECT
 
-			ROW_NUMBER() OVER(ORDER BY hsp.pat_id ASC) AS '@id',
-		
-	   			(
-					 SELECT
-					left(case 
-						 when p.PAT_MIDDLE_NAME is null 
-						 then p.pat_last_name +', '+ p.pat_first_name
-						 else p.pat_last_name +', '+ p.pat_first_name +' '+substring(p.PAT_MIDDLE_NAME,1,1) 
-						   end, 30) as 'pat_name',
-						case 
-							when p.add_line_1  = 'none' then 'Unknown'
-							when p.add_line_1 is null then 'Unknown'
-							when len(p.add_line_1) < 5 then 'Unknown'
-							else left(p.add_line_1,70)
-							end  as 'pat_address',
-					
-						 	CASE WHEN p.city is null THEN 'Oklahoma City' 
-							ELSE p.city END  as 'pat_city',
+			ROW_NUMBER() OVER(ORDER BY acct.PAT_ID ASC) AS '@id',
 
-						 CASE WHEN st.abbr is null THEN 'ZZ' 
-							  WHEN LEN(st.abbr) > 2 THEN 'XX' 
-							  ELSE st.abbr END  as 'pat_state',
-					case when isnumeric(substring(p.zip,1,5)) = 1 then substring(p.zip,1,5) else 99990 end as 'pat_zip',
-					case 
-						 when p.SEX_C = 1 then 'F'
-						 when p.SEX_C = 2 then 'M'
-						 when p.SEX_C = 3 then 'U'
-						 when p.SEX_C = 950 then 'U'
-						 when p.SEX_C = 951 then 'U'
-						 when p.SEX_C = 999 then 'U'
-						  end as 'pat_gender',
-				   case 
-						 when r.PATIENT_RACE_C = 1 then 4
-						 when r.PATIENT_RACE_C = 2 then 3
-						 when r.PATIENT_RACE_C = 3 then 1
-						 when r.PATIENT_RACE_C = 4 then 2
-						 when r.PATIENT_RACE_C = 5 then 2
-						 when r.PATIENT_RACE_C = 6 then 5
-						 when r.PATIENT_RACE_C = 7 then 6
-						 when r.PATIENT_RACE_C = 8 then 6
-						  end as 'pat_race',
+				(
+					SELECT
+					left(case
+						 when acct.PAT_MIDDLE_NAME is null
+						 then acct.PAT_LAST_NAME +', '+ acct.PAT_FIRST_NAME
+						 else acct.PAT_LAST_NAME +', '+ acct.PAT_FIRST_NAME +' '+substring(acct.PAT_MIDDLE_NAME,1,1)
+						   end, 30) as 'pat_name',
+						case
+							when acct.ADD_LINE_1  = 'none' then 'Unknown'
+							when acct.ADD_LINE_1 is null then 'Unknown'
+							when len(acct.ADD_LINE_1) < 5 then 'Unknown'
+							else left(acct.ADD_LINE_1,70)
+							end  as 'pat_address',
+
+						 	CASE WHEN acct.CITY is null THEN 'Oklahoma City'
+							ELSE acct.CITY END  as 'pat_city',
+
+						 CASE WHEN acct.StateAbbr is null THEN 'ZZ'
+							  WHEN LEN(acct.StateAbbr) > 2 THEN 'XX'
+							  ELSE acct.StateAbbr END  as 'pat_state',
+						case when isnumeric(substring(acct.ZIP,1,5)) = 1 then substring(acct.ZIP,1,5) else 99990 end as 'pat_zip',
+						case
+							 when acct.SEX_C = 1 then 'F'
+							 when acct.SEX_C = 2 then 'M'
+							 when acct.SEX_C = 3 then 'U'
+							 when acct.SEX_C = 950 then 'U'
+							 when acct.SEX_C = 951 then 'U'
+							 when acct.SEX_C = 999 then 'U'
+							  end as 'pat_gender',
+					   case
+							 when acct.PATIENT_RACE_C = 1 then 4
+							 when acct.PATIENT_RACE_C = 2 then 3
+							 when acct.PATIENT_RACE_C = 3 then 1
+							 when acct.PATIENT_RACE_C = 4 then 2
+							 when acct.PATIENT_RACE_C = 5 then 2
+							 when acct.PATIENT_RACE_C = 6 then 5
+							 when acct.PATIENT_RACE_C = 7 then 6
+							 when acct.PATIENT_RACE_C = 8 then 6
+							  end as 'pat_race',
+
+					  case
+						   when acct.ETHNIC_GROUP_C = 1 then 2
+						   when acct.ETHNIC_GROUP_C = 2 then 1
+						   when acct.ETHNIC_GROUP_C = 3 then 6
+						   when acct.ETHNIC_GROUP_C = 4 then 6
+					   when acct.ETHNIC_GROUP_C is null then 6
+							end as 'pat_ethnicity',
+
+					 case
+						  when acct.MARITAL_STATUS_C = 1 then 'S'
+						  when acct.MARITAL_STATUS_C = 2 then 'M'
+						  when acct.MARITAL_STATUS_C = 3 then 'X'
+						  when acct.MARITAL_STATUS_C = 4 then 'D'
+						  when acct.MARITAL_STATUS_C = 5 then 'W'
+						  when acct.MARITAL_STATUS_C = 6 then 'U'
+						  when acct.MARITAL_STATUS_C = 7 then 'P'
+						  when acct.MARITAL_STATUS_C = 100 then 'U'
+						   end as 'pat_marital_stat',
+
+					convert(date,acct.BIRTH_DATE,100) as 'pat_birth_date',
+
+					case
+						when substring(acct.SSN,8,4) < 4 then '300'
+						when  substring(acct.SSN,8,4) in('0000','9999') then '300'
+						WHEN substring(acct.SSN,8,4) IS NULL then '300'
+						else substring(acct.SSN,8,4)
+						   end as 'pat_ssn',
+
+					acct.HSP_ACCOUNT_ID as 'pat_control_no',
+					acct.PAT_MRN_ID as 'pat_medical_rec_no',
+					CASE WHEN acct.DISCH_LOC_ID = 43004001 THEN '1275593337' --HPI CHN
+						WHEN acct.DISCH_LOC_ID = 43005005 THEN '1275593337' --HPI CHS
+						WHEN acct.DISCH_LOC_ID = 43006001 THEN '1942260971' --HPI NWSH
+						END as 'national_provider_no',
+					convert(date,acct.ADM_DATE_TIME,100) as 'admit_date',
+           		 case datepart(HOUR, acct.ADM_DATE_TIME)
+						WHEN 0 THEN   '12'
+						WHEN 1 THEN   '01'
+						WHEN 2 THEN   '02'
+						WHEN 3 THEN   '03'
+						WHEN 4 THEN   '04'
+						WHEN 5 THEN   '05'
+						WHEN 6 THEN   '06'
+						WHEN 7 THEN   '07'
+						WHEN 8 THEN   '08'
+						WHEN 9 THEN   '09'
+						ELSE CONVERT(varchar, DATEPART(HOUR, acct.ADM_DATE_TIME))
+						 END  as 'admit_hour',
+
+					  convert(date,acct.DISCH_DATE_TIME,100) as 'disch_date',
+
+				 case datepart(HOUR, acct.DISCH_DATE_TIME)
+					   WHEN 0 THEN  '12'
+					   WHEN 1 THEN   '01'
+					   WHEN 2 THEN   '02'
+					   WHEN 3 THEN   '03'
+					   WHEN 4 THEN   '04'
+					   WHEN 5 THEN   '05'
+					   WHEN 6 THEN   '06'
+					   WHEN 7 THEN   '07'
+					   WHEN 8 THEN   '08'
+					   WHEN 9 THEN   '09'
+					   ELSE CONVERT(varchar, DATEPART(HOUR, acct.DISCH_DATE_TIME))
+						 END  as 'disch_hour',
 
 				  case
-					   when p.ETHNIC_GROUP_C = 1 then 2
-					   when p.ETHNIC_GROUP_C = 2 then 1
-					   when p.ETHNIC_GROUP_C = 3 then 6
-					   when p.ETHNIC_GROUP_C = 4 then 6
-				   when p.ETHNIC_GROUP_C is null then 6
-						end as 'pat_ethnicity',
+					   when acct.ADMISSION_SOURCE_C = 18 then 'D'
+					   when acct.ADMISSION_SOURCE_C = 23 then 'E'
+					   when acct.ADMISSION_SOURCE_C = 24 then 'F'
+					   when acct.ADMISSION_SOURCE_C = 25 then '5'
+					   when acct.ADMISSION_SOURCE_C = 26 then '6'
+						when acct.ADMISSION_SOURCE_C is null then '1'
+					   else CONVERT(varchar(10), acct.ADMISSION_SOURCE_C)
+						 end as 'point_origin',
+				  CASE
+				  when acct.ADMISSION_TYPE_C is null then 1
+				   else acct.ADMISSION_TYPE_C
+					 end  as 'admit_type',
+
+				 case CONVERT(varchar,acct.PATIENT_STATUS_C)
+					  when 42 then '20'
+					  when 41 then '20'
+					  when 40 then '20'
+					  when 100 then '50'
+					  when 10 then '04'
+					  when 09 then '02'
+					  when 30 then '02'
+					  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
+								then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+								else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+						   end
+						end as 'pat_disch_status',
+
+				 ( Select top (6)
+					CONCAT(LTRIM((RTRIM(SUBSTRING(ecode.ref_bill_code, CHARINDEX('.',  ecode.ref_bill_code)-3, 3))))
+							   ,LTRIM((RTRIM(SUBSTRING(ecode.ref_bill_code, CHARINDEX('.',ecode.ref_bill_code) +1, 4))))
+							   )as 'ecode'
+					from #TEMPEcode ecode
+					where  acct.HSP_ACCOUNT_ID=ecode.HSP_ACCOUNT_ID
+					order by ecode.LINE
+					for xml Path(''), TYPE
+				 ),
 
 				 case
-					  when p.MARITAL_STATUS_C = 1 then 'S'
-					  when p.MARITAL_STATUS_C = 2 then 'M'
-					  when p.MARITAL_STATUS_C = 3 then 'X'
-					  when p.MARITAL_STATUS_C = 4 then 'D'
-					  when p.MARITAL_STATUS_C = 5 then 'W'
-					  when p.MARITAL_STATUS_C = 6 then 'U'
-					  when p.MARITAL_STATUS_C = 7 then 'P'
-					  when p.MARITAL_STATUS_C = 100 then 'U'
-					   end as 'pat_marital_stat',
+					  when acct.AttendingNPI = '' then 'OTHOOO'
+					  when acct.AttendingNPI IS NULL THEN 'OTHOOO'
+					  else acct.AttendingNPI
+						end as 'attending_phys_id',
 
-				convert(date,p.BIRTH_DATE,100) as 'pat_birth_date',
+				 case
+					  when acct.BENEFIT_PLAN_NAME = 'MEDICARE PART A&B' then 'MEDICARE PART AB'
+								  when  acct.BENEFIT_PLAN_NAME is null then 'Self-Pay'
+								  when acct.BENEFIT_PLAN_NAME = 'BENEFIT MANAGEMENT, INC - PREFERRED COMMUNITY CHOICE' THEN 'BENEFIT MANAGEMENT INC PREFERRED COMMUNITY CHOICE'
+					  else acct.BENEFIT_PLAN_NAME
+						end  as 'prim_payer_name',
 
-				case 
-	       			when substring(p.ssn,8,4) < 4 then '300'
-	           		when  substring(p.ssn,8,4) in('0000','9999') then '300'
-					WHEN substring(p.ssn,8,4) IS NULL then '300'
-					else substring(p.SSN,8,4) 
-					   end as 'pat_ssn',
+				 case
+				 /* Payer-specific overrides must come first: several of these share a
+				    FINANCIAL_CLASS with a much broader payer group below, so without
+				    checking benefit_plan_id/payor_id up front, the financial-class
+				    branch further down would catch them first and mask the override. */
+				 when acct.BENEFIT_PLAN_ID in (1601901,1601902) then 5 /*Atlas / Centralink Bundled Payment*/
+				 when acct.BENEFIT_PLAN_ID = 1601904 or acct.PAYOR_ID = 10622 then 6 /*HPI Bundled Self Pay*/
+				 when acct.BENEFIT_PLAN_ID = 1800120 then 2 /*Mending Health*/
+				 when acct.BENEFIT_PLAN_ID in (1800112,1550109) then 7 /*Chickasaw Nation*/
+				 when acct.BENEFIT_PLAN_ID in (2400503,2400501) then 5 /*Department of Labor*/
+				 when acct.FINANCIAL_CLASS in (100,140,150,170,180,190,210,250,260,270,280,310)
+					  then 1 /*Commercial*/
+					  when acct.FINANCIAL_CLASS in (2,220,101)
+					  OR acct.BENEFIT_PLAN_ID in(2201104, 2201105) /*UHC Dual Complete*/
+					  then 2 /*Medicare*/
+					  when acct.FINANCIAL_CLASS in (1,3,215,401)
+					  OR acct.BENEFIT_PLAN_ID in(3000112, 3000304, 4000112, 4000201) /*Aetna*/
+					  OR acct.BENEFIT_PLAN_ID in(3000113,4000113,4000203) /*Humana*/
+					  then 3 /*Medicaid*/
+					  when acct.FINANCIAL_CLASS in (6,230)
+					  OR acct.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401)
+					  then 4 /*VA or Military*/
+					  when acct.FINANCIAL_CLASS = 240
+					  OR acct.BENEFIT_PLAN_ID in
+					  (1800103,1800106,1801701,2400427) /*Hobby Lobby mapped to work comp*/
+					  then 5 /*Work Comp*/
+					  When acct.FINANCIAL_CLASS = 311
+					  then 6 /*Uninsured or Self Pay*/
+					  When acct.FINANCIAL_CLASS is null then 6 /*Uninsured or Self Pay*/
+					  when acct.FINANCIAL_CLASS = 160 and acct.PAYOR_NAME like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 6 /*Uninsured or Self Pay*/
+					  when (acct.FINANCIAL_CLASS in (160, 155) OR acct.BENEFIT_PLAN_ID in(1601903,1602101,1600109)
+					  ) and acct.PAYOR_NAME not like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 7
+					  else 7 end as 'prim_payer_class',
 
-				hsp.HSP_ACCOUNT_ID as 'pat_control_no',
-				p.PAT_MRN_ID as 'pat_medical_rec_no',
-				CASE WHEN HSP.DISCH_LOC_ID = 43004001 THEN '1275593337' --HPI CHN
-					WHEN HSP.DISCH_LOC_ID = 43005005 THEN '1275593337' --HPI CHS
-					WHEN HSP.DISCH_LOC_ID = 43006001 THEN '1942260971' --HPI NWSH
-					END as 'national_provider_no',
-				convert(date,hsp.ADM_DATE_TIME,100) as 'admit_date',
-           		 case datepart(HOUR, hsp.ADM_DATE_TIME)
-					WHEN 0 THEN   '12'
-					WHEN 1 THEN   '01'
-					WHEN 2 THEN   '02'
-					WHEN 3 THEN   '03'
-					WHEN 4 THEN   '04'
-					WHEN 5 THEN   '05'
-					WHEN 6 THEN   '06'
-					WHEN 7 THEN   '07'
-					WHEN 8 THEN   '08'
-					WHEN 9 THEN   '09'
-					ELSE CONVERT(varchar, DATEPART(HOUR, hsp.ADM_DATE_TIME))
-					 END  as 'admit_hour',
-	       
-				  convert(date,hsp.DISCH_DATE_TIME,100) as 'disch_date',
-	  
-			 case datepart(HOUR, hsp.DISCH_DATE_TIME)
-				   WHEN 0 THEN  '12'
-				   WHEN 1 THEN   '01'
-				   WHEN 2 THEN   '02'
-				   WHEN 3 THEN   '03'
-				   WHEN 4 THEN   '04'
-				   WHEN 5 THEN   '05'
-				   WHEN 6 THEN   '06'
-				   WHEN 7 THEN   '07'
-				   WHEN 8 THEN   '08'
-				   WHEN 9 THEN   '09'
-				   ELSE CONVERT(varchar, DATEPART(HOUR, hsp.DISCH_DATE_TIME))
-					 END  as 'disch_hour',
-
-			  case
-				   when hsp.ADMISSION_SOURCE_C = 18 then 'D'
-				   when hsp.ADMISSION_SOURCE_C = 23 then 'E'
-				   when hsp.ADMISSION_SOURCE_C = 24 then 'F'
-				   when hsp.ADMISSION_SOURCE_C = 25 then '5'
-				   when hsp.ADMISSION_SOURCE_C = 26 then '6'
-					when hsp.ADMISSION_SOURCE_C is null then '1'
-				   else hsp.ADMISSION_SOURCE_C
-					 end as 'point_origin',
-			  CASE
-			  when hsp.ADMISSION_TYPE_C is null then 1
-			   else hsp.ADMISSION_TYPE_C
-				 end  as 'admit_type',
-
-			 case CONVERT(varchar,hsp.PATIENT_STATUS_C)
-				  when 42 then '20'
-				  when 41 then '20'
-				  when 40 then '20'
-				  when 100 then '50'
-				  when 10 then '04'
-				  when 09 then '02'
-				  when 30 then '02'
-				  else hsp.PATIENT_STATUS_C
-					end as 'pat_disch_status',
-
-			  -- convert(numeric,hsp.BIRTH_WEIGHT, 100) as 'birth_weight',
-			 ( Select top (6)
-				CONCAT(LTRIM((RTRIM(SUBSTRING(ecode.ref_bill_code, CHARINDEX('.',  ecode.ref_bill_code)-3, 3))))
-						   ,LTRIM((RTRIM(SUBSTRING(ecode.ref_bill_code, CHARINDEX('.',ecode.ref_bill_code) +1, 4))))
-						   )as 'ecode'
-				from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].V_CODING_ALL_DX_PX_LIST ecode with(nolock)
-					left join [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].ZC_DX_POA pos on ecode.DX_POA_C = pos.DX_POA_C
-				where  hsp.HSP_ACCOUNT_ID=ecode.HSP_ACCOUNT_ID 
-					and ecode.SOURCE_name = 'External Cause of Injury Primary Code Set'
-				for xml Path(''), TYPE		
-			 ),
-	
-			 case 
-				  when ser2.NPI = '' then 'OTHOOO' 
-				  when ser2.NPI IS NULL THEN 'OTHOOO'
-				  else ser2.NPI
-					end as 'attending_phys_id',
-
-			 case 
-				  when epp.BENEFIT_PLAN_NAME = 'MEDICARE PART A&B' then 'MEDICARE PART AB'
-							  when  epp.BENEFIT_PLAN_NAME is null then 'Self-Pay'
-							  when epp.BENEFIT_PLAN_NAME = 'BENEFIT MANAGEMENT, INC - PREFERRED COMMUNITY CHOICE' THEN 'BENEFIT MANAGEMENT INC PREFERRED COMMUNITY CHOICE'
-				  else epp.BENEFIT_PLAN_NAME
-					end  as 'prim_payer_name',
-
-			 case
-
-				
-
-
-
-
-				  when epm.FINANCIAL_CLASS in (100,140,150,170,180,190,210,250,260,270,280,310)
-				  --1
-/*
-HPI BUNDLED CASE AGREEMENTS
-HPI BUNDLED SELF-PAY CASE AGREEMENTS
-HPI CASH PAY PATIENTS
-CHICKASAW NATION- HCH PLUS 
-CHICKASAW NATION
-CHICKASAW NATION
-*/then 1 /*Commercial*/
-				  when epm.FINANCIAL_CLASS in (2,220,101)		  
-				  OR epp.BENEFIT_PLAN_ID in(2201104, 2201105) /*UHC Dual Complete*/
-				  then 2 /*Medicare*/
-				  when epm.FINANCIAL_CLASS in (1,3,215,401)
-				  OR epp.BENEFIT_PLAN_ID in(3000112, 3000304, 4000112, 4000201) /*Aetna*/				  
-				  OR epp.BENEFIT_PLAN_ID in(3000113,4000113,4000203) /*Humana*/		
-				  then 3 /*Medicaid*/ 
-				  when epm.FINANCIAL_CLASS in (6,230)
-				  OR epp.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401,3000113, 4000113)--4
-/*
-AETNA BETTER HEALTH OF OKLAHOMA
-AETNA BETTER HEALTH MEDICAID KANCARE
-AETNA BETTER HEALTH OF OKLAHOMA
-OSU AETNA BETTER HEALTH ALTERNATE	
-UNITED HEALTHCARE DUAL COMPLETE HMO SNP
-UNITED HEALTHCARE DUAL COMPLETE PPO SNP
-*/then 4 /*VA or Military*/
-				  when epm.FINANCIAL_CLASS = 240 
-				  OR epp.BENEFIT_PLAN_ID in 
-				  (1800103,1800106,1801701,2400427) /*Hobby Lobby mapped to work comp*/
-				  then 5 /*Work Comp*/
-				  When epm.FINANCIAL_CLASS = 311
-				  or epp.BENEFIT_PLAN_ID in
-				  (1601904) /*Self Pay*/
-				  or epm.PAYOR_ID in 
-				  (10622) /*Self Pay*/
-				  then 6 /*Uninsured or Self Pay*/
-				  When epm.FINANCIAL_CLASS is null then 6 /*Uninsured or Self Pay*/
-				  when epm.FINANCIAL_CLASS = 160 and epm.PAYOR_NAME like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 6 /*Uninsured or Self Pay*/
-				  when (epm.FINANCIAL_CLASS in (160, 155) OR epp.BENEFIT_PLAN_ID in(1601903, 1601904,1602101,1550109,1600109,1800112) -- 7
-/*
-HUMANA
-HUMANA - GENERIC
-HUMANA MEDICARE SUPPLEMENT
-HUMANA CHOICECARE PPO
-HUMANA NATIONAL TRANSPLANT NETWORK
-HUMANA BEHAVIORAL HEALTH
-HUMANA MEDICARE ADVANTAGE PPO
-HUMANA MEDICARE ADVANTAGE HMO
-HUMANA MEDICARE ADVANTAGE PFFS
-HUMANA MEDICARE ADVANTAGE PPO
-HUMANA VETERANS
-HUMANA BEHAVIORAL TRICARE MENTAL HEALTH
-HUMANA HEALTHY HORIZONS
-HUMANA HEALTHY HORIZONS
-OSU HUMANA HEALTHY HORIZONS ALTERNATE
-*/) and epm.PAYOR_NAME not like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 7
-				  else 7 end as 'prim_payer_class',
-
-     		convert(numeric,hsp.TOT_CHGS,100) as 'total_charges',
+     		convert(numeric,acct.TOT_CHGS,100) as 'total_charges',
 			'0131' as 'bill_type',
-	
-		--case
-		--				when drg.DRG_NUMBER = '' then '9999'
-		--				else left(drg.drg_number, 1)+''+right(drg.DRG_NUMBER, 3)
-		--			end as 'drg',
-	
 			'0' as 'icdv',
 
-
-		(
-			select
-			
-			
-				CONCAT(LTRIM((RTRIM(SUBSTRING(dx.current_icd10_list, CHARINDEX('.', dx.current_icd10_list) -3, 3)))) 
-							,LTRIM((RTRIM(SUBSTRING(dx.current_icd10_list, CHARINDEX('.', dx.current_icd10_list) +1, 4))))
-						
-							)as 'princ_diag',
-								
 			(
-					select top (17)
-							CONCAT(	LTRIM((RTRIM(SUBSTRING(dx.current_icd10_list, CHARINDEX('.', dx.current_icd10_list) -3, 3))))
-							,LTRIM((RTRIM(SUBSTRING(dx.current_icd10_list, CHARINDEX('.', dx.current_icd10_list) +1, 4))))
-						
-							)as	 'oth_diag_code'
-				
-					from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].[HSP_ACCT_DX_LIST] diag with(nolock)
-						join [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_edg dx with(nolock) on dx.dx_id=diag.dx_id
-					
-					where hsp.hsp_account_id=diag.HSP_ACCOUNT_ID
-							and diag.LINE <>1
-						
+				select
+					CONCAT(LTRIM((RTRIM(SUBSTRING(diag.current_icd10_list, CHARINDEX('.', diag.current_icd10_list) -3, 3))))
+								,LTRIM((RTRIM(SUBSTRING(diag.current_icd10_list, CHARINDEX('.', diag.current_icd10_list) +1, 4))))
+								)as 'princ_diag',
 
-					for xml path(''), type, elements
+					(
+						select top (17)
+								CONCAT(	LTRIM((RTRIM(SUBSTRING(diag2.current_icd10_list, CHARINDEX('.', diag2.current_icd10_list) -3, 3))))
+								,LTRIM((RTRIM(SUBSTRING(diag2.current_icd10_list, CHARINDEX('.', diag2.current_icd10_list) +1, 4))))
+								)as	 'oth_diag_code'
 
+						from #TEMPDx diag2
+						where acct.HSP_ACCOUNT_ID=diag2.HSP_ACCOUNT_ID
+								and diag2.LINE <>1
+						order by diag2.LINE
+						for xml path(''), type, elements
+					)
+
+				from #TEMPDx diag
+				where acct.HSP_ACCOUNT_ID=diag.HSP_ACCOUNT_ID
+						and diag.LINE = 1
+						AND diag.current_icd10_list is not null
+				for xml auto, type
+			),
+			----------------  PROCEDURE AREA ------------------
+
+			(
+				select top (1)
+					case
+					when procs.CPT_CODE is null or Trim(procs.CPT_CODE) = ''
+					then  '99999'
+					else procs.CPT_CODE
+					end as 'princ_cpt_proc',
+					case
+					 when procs.ProviderNPI = '' then 'OTHOOO'
+					 when procs.ProviderNPI is null then 'OTHOOO'
+					 else procs.ProviderNPI
+					end as 'princ_cpt_proc_phys_id',
+					convert(date,procs.PX_DATE,100) as 'princ_cpt_proc_date'
+
+				from #TEMPProcedures procs
+
+				where acct.HSP_ACCOUNT_ID=procs.HSP_ACCOUNT_ID
+					and procs.VisitProcedureSequence = 1
+
+				  for xml auto, type
+			),
+
+ 					----------------  CHARGE AREA ------------------
+
+			(
+				select
+
+				RIGHT('0'+ CONVERT(VARCHAR,charge.UB_REV_CODE_ID),4)as 'rev_code' ,
+				CAST(ROUND(ISNULL(SUM(charge.QUANTITY),0), 0) as int) as 'units_service' ,
+				CAST(ROUND(ISNULL(SUM(charge.TX_AMOUNT),0), 0) as int) 'tot_charges_rev_cat'
+
+				from #TEMPTransactions charge
+
+				where acct.HSP_ACCOUNT_ID=charge.HSP_ACCOUNT_ID
+					and charge.UB_REV_CODE_ID is not null
+				group by charge.UB_REV_CODE_ID
+
+				for xml Path('charge'), Root('charges'),TYPE
+
+			)
+
+				for xml path(''), type
 				)
-		
-		
-		from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].[HSP_ACCT_DX_LIST] diag with(nolock)
-				join [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_edg dx with(nolock) on dx.dx_id=diag.dx_id
-            
 
-			where hsp.hsp_account_id=diag.HSP_ACCOUNT_ID
-					and diag.LINE = 1
-					AND dx.current_icd10_list is not null
-			
-			
-			
-			
-			for xml auto, type
-		),
-		----------------  PROCEDURE AREA ------------------
+			FROM #TEMPAccounts acct
 
-		(
-			select top (1)
-				case
-				when procs.CPT_CODE is null or Trim(procs.CPT_CODE) = '' or Trim(max(procs.CPT_CODE)) = '' or max(procs.cpt_code) is null --= 99999
-				then  '99999'
-				else max(procs.cpt_code) --+''+procs.CPT_MODIFIERS
-				end as 'princ_cpt_proc',
-				case 
-				 when ser2.NPI = '' then 'OTHOOO' 
-				 else ser2.NPI
-				end as 'princ_cpt_proc_phys_id',
-				convert(date,procs.SERVICE_DATE,100) as 'princ_cpt_proc_date'
+	  order by '@id'
 
-					--(
-
-					-- Select top (17)
-					
-					--	convert(date,ap.proc_date,100) as 'oth_proc_date'
-
-					--from HSP_ACCT_cpt_codes cp 
-					--	join HSP_ACCOUNT hsp  on hsp.hsp_account_id = cp.HSP_ACCOUNT_ID
-
-					--where ap.LINE <> 1
-			
-					--for xml Path(''), TYPE
-
-					--)
-		
-			from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].[HSP_TRANSACTIONS] procs with(nolock)
-		
-			where hsp.hsp_account_id=procs.HSP_ACCOUNT_ID
-					and procs.UB_REV_CODE_ID = 450
-		and procs.CPT_CODE <> 'EDNOCHG'
-		group by 
-		procs.CPT_CODE,procs.SERVICE_DATE
-			
-			  --for xml Path('procs'), TYPE
-			  --for xml Path('procs'), Root('auto'),TYPE
-			  --for xml path(''), type, elements
-			  for xml auto, type  
-		),
-
-
-
- 		----------------  CHARGE AREA ------------------
- 
-		(
-			select
-			
-			RIGHT('0'+ CONVERT(VARCHAR,charge.UB_REV_CODE_ID),4)as 'rev_code' ,
-			CAST(ROUND(ISNULL(SUM(charge.QUANTITY),0), 0) as int) as 'units_service' ,
-			CAST(ROUND(ISNULL(SUM(charge.TX_AMOUNT),0), 0) as int) 'tot_charges_rev_cat'	
-		
-			from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].[HSP_TRANSACTIONS] charge with(nolock)
-
-			where hsp.hsp_account_id=charge.HSP_ACCOUNT_ID
-				and charge.UB_REV_CODE_ID is not null
-			group by charge.UB_REV_CODE_ID
-			
-			for xml Path('charge'), Root('charges'),TYPE
-
+		for XML Path ('patientrecord'), TYPE
 		)
-			FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PATIENT p
+	 for XML Path('patientrecords'), TYPE
+	 );
 
-						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].ZC_STATE st	ON st.STATE_C = p.STATE_C
-						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PATIENT_RACE r	ON r.pat_id = p.PAT_ID
-						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].CLARITY_EPM epm	ON epm.PAYOR_ID = hsp.PRIMARY_PAYOR_ID
-						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_epp epp	ON epp.BENEFIT_PLAN_ID = hsp.PRIMARY_PLAN_ID
-						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_drg drg	ON drg.DRG_ID = hsp.FINAL_DRG_ID
-						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_ser_2 ser2 ON ser2.PROV_ID = hsp.ATTENDING_PROV_ID
-						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].ZC_MC_ADM_SOURCE zcadmin ON zcadmin.ADMISSION_SOURCE_C = hsp.ADMISSION_SOURCE_C
-			WHERE hsp.PAT_ID = p.PAT_ID
-					AND (r.line is null or r.line = 1) 
-			  		AND convert(numeric,hsp.TOT_CHGS,100) > 0
-					AND hsp.TOT_CHGS > 0
-			   				
-			for xml path(''), type
-	)
-
-	FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCOUNT hsp
-		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PATIENT p	ON hsp.PAT_ID = p.PAT_ID
-		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PAT_ENC_HSP enc on hsp.PRIM_ENC_CSN_ID = ENC.PAT_ENC_CSN_ID
-		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].CLARITY_DEP dep on dep.DEPARTMENT_ID = enc.DEPARTMENT_ID
-		--LEFT JOIN ZC_STATE st ON st.STATE_C = p.STATE_C
-		-- JOIN PATIENT_RACE r ON r.pat_id = p.PAT_ID
-		--LEFT JOIN clarity.dbo.CLARITY_EPM epm	ON epm.PAYOR_ID = hsp.PRIMARY_PAYOR_ID
-		--LEFT JOIN clarity.dbo.clarity_epp epp	ON epp.BENEFIT_PLAN_ID = hsp.PRIMARY_PLAN_ID
-		--LEFT JOIN clarity.dbo.clarity_drg drg	ON drg.DRG_ID = hsp.FINAL_DRG_ID
-		--LEFT JOIN clarity.dbo.clarity_ser_2 ser2 ON ser2.PROV_ID = hsp.ATTENDING_PROV_ID
-		--LEFT JOIN clarity.dbo.ZC_MC_ADM_SOURCE zcadmin ON zcadmin.ADMISSION_SOURCE_C = hsp.ADMISSION_SOURCE_C
-
-	WHERE 1=1
-		--AND hsp.HSP_ACCOUNT_ID in (606203035,606203105,606201776) 
-		AND hsp.DISCH_DATE_TIME >= @startdate
-		AND hsp.DISCH_DATE_TIME <= @enddate
-		and hsp.CODING_STATUS_C = 4 -- Completed coding
-		AND hsp.ACCT_BASECLS_HA_C = 3
-		AND hsp.HSP_ACCOUNT_ID >= 600000000
-		AND convert(numeric,hsp.TOT_CHGS,100) > 0
-		AND (hsp.ACCT_FIN_CLASS_C = 4 /*Self Pay*/
-			 OR exists( select * 
-						from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_epp epp1
-						where epp1.BENEFIT_PLAN_NAME not in  ('OKLAHOMA CITY POLICE DEPARTMENT','TURN KEY HEALTH CLINIC','SHARED SERVICE','SANE/YWCA','VALIR HOSPICE','WILLOW CREST HOSPITAL')
-							  AND hsp.PRIMARY_PLAN_ID = epp1.BENEFIT_PLAN_ID)
-			)
-		AND hsp.pat_id is not null
-		AND HSP.DISCH_LOC_ID IN (@Location
-								--43004001 --HPI CHN
-								--,43005005 --HPI CHS
-								--,43006001 --HPI NWSH
-								)  
-		  order by '@id'
-			
-			for XML Path ('patientrecord'), TYPE
-			)
-		 for XML Path('patientrecords'), TYPE
-		 )
-
-/*Detail XML*/
+/* ============================================================
+   8. Trailer XML - unchanged from original
+   ============================================================ */
 DECLARE @Tr XML=
 	(
 	SELECT @Dt.value('count(/patientrecords/*)', 'int') as 'total_records'
 	for XML Path('trailer'), TYPE
-	)
+	);
 
-/*Output XML*/	
-Declare @out  NVARCHAR(MAX)
-
- SELECT 
- @Hd,
- @Dt,
- @Tr
-	--REPLACE(Cast(@Hd as varchar(max)), '&lt;', '||||')
-	--,REPLACE(Cast(@Dt as varchar(max)),Cast(@Tr as varchar(max)
+/* ============================================================
+   9. Output - unchanged from original
+   ============================================================ */
+SELECT
+	@Hd
+	,@Dt
+	,@Tr
 for XML Path('hci_data'), TYPE;
+
+/* ============================================================
+   10. Cleanup
+   ============================================================ */
+IF OBJECT_ID('tempdb..#TEMPAccounts')     IS NOT NULL DROP TABLE #TEMPAccounts;
+IF OBJECT_ID('tempdb..#TEMPDx')           IS NOT NULL DROP TABLE #TEMPDx;
+IF OBJECT_ID('tempdb..#TEMPEcode')        IS NOT NULL DROP TABLE #TEMPEcode;
+IF OBJECT_ID('tempdb..#TEMPTransactions') IS NOT NULL DROP TABLE #TEMPTransactions;
+IF OBJECT_ID('tempdb..#TEMPProcedures')   IS NOT NULL DROP TABLE #TEMPProcedures;
+
 end
 GO
