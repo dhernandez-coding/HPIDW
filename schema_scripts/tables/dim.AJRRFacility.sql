@@ -1,0 +1,8 @@
+CREATE TABLE [dim].[AJRRFacility] (
+    [REV_LOC_ID] NUMERIC(18,0) NOT NULL,
+    [Hospital_ASC_Name] VARCHAR(600) NULL,
+    [Hospital_ASC_NPI] VARCHAR(10) NULL,
+    [RegistryAccountID] VARCHAR(12) NULL,
+    CONSTRAINT [PK__AJRRFaci__B6EB1B4FBC099D82] PRIMARY KEY ([REV_LOC_ID])
+);
+GO
