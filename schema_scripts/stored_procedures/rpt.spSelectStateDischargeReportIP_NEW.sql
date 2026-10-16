@@ -460,15 +460,18 @@ DECLARE @Dt XML=
 						end  as 'admit_type',
 
 					  case CONVERT(varchar,acct.PATIENT_STATUS_C)
-									when 42 then '20'
-									when 41 then '20'
-									when 40 then '20'
-									when 100 then '50'
-									when 10 then '04'
-									when 09 then '02'
-									when 30 then '02'
-									 else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
-										   end as 'pat_disch_status',
+				  when 42 then '20'
+				  when 41 then '20'
+				  when 40 then '20'
+				  when 100 then '50'
+				  when 10 then '04'
+				  when 09 then '02'
+				  when 30 then '02'
+				  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
+								then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+								else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+						   end
+					end as 'pat_disch_status',
 
 					convert(numeric,acct.BIRTH_WEIGHT, 100) as 'birth_weight',
 

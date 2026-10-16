@@ -4,12 +4,15 @@ CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED_NEW]
  @startdate datetime = null,
  @enddate datetime = null,
  @Location int = 43004001 --HPI CHN
- 	--43005005 --HPI CHS
-	--43006001 --HPI NWSH
-as begin
+ 	--DECLARE @Location int = 43005005 --HPI CHS
+	--DECLARE @Location int = 43006001 --HPI NWSH
+
+AS BEGIN
 
 SET NOCOUNT ON;
 
+--DECLARE @startdate datetime = '2026-01-01'
+--DECLARE @enddate datetime = '2026-08-31'
 SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
 SET @enddate   = IsNull(@enddate,   DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
 
@@ -480,15 +483,18 @@ DECLARE @Dt XML=
 					 end  as 'admit_type',
 
 				 case CONVERT(varchar,acct.PATIENT_STATUS_C)
-					  when 42 then '20'
-					  when 41 then '20'
-					  when 40 then '20'
-					  when 100 then '50'
-					  when 10 then '04'
-					  when 09 then '02'
-					  when 30 then '02'
-					  else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
-						end as 'pat_disch_status',
+				  when 42 then '20'
+				  when 41 then '20'
+				  when 40 then '20'
+				  when 100 then '50'
+				  when 10 then '04'
+				  when 09 then '02'
+				  when 30 then '02'
+				  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
+								then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+								else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+						   end
+					end as 'pat_disch_status',
 
 				 ( Select top (6)
 					CONCAT(LTRIM((RTRIM(SUBSTRING(ecode.ref_bill_code, CHARINDEX('.',  ecode.ref_bill_code)-3, 3))))
@@ -658,5 +664,5 @@ IF OBJECT_ID('tempdb..#TEMPEcode')        IS NOT NULL DROP TABLE #TEMPEcode;
 IF OBJECT_ID('tempdb..#TEMPTransactions') IS NOT NULL DROP TABLE #TEMPTransactions;
 IF OBJECT_ID('tempdb..#TEMPProcedures')   IS NOT NULL DROP TABLE #TEMPProcedures;
 
-end
+END
 GO
