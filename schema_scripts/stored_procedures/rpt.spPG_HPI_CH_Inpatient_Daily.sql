@@ -9,10 +9,364 @@
 1/18/2023: Zeke Herrera: Where clause in final statement now using a.Coding_datetime instead of a.Completion_dt_tm. Coding_status IN (4) - Completed has also been added. 
 1/23/2024: Eric Silvestri: Updated CTEConfidentialPatients to include 430 Service area only 
 12/30/2025: Chris Cross: Updated Admission Source from zcas.ADMIT_SOURCE_C to zcas.ABBR
+10/16/2026: Eric Silvestri: Converted linked server queries to OPENQUERY
 -- =============================================
 */
 
 CREATE PROCEDURE [rpt].[spPG_HPI_CH_Inpatient_Daily] @STARTDATE date, @ENDDATE date
+AS
+BEGIN
+SET NOCOUNT ON;
+
+--Criteria:
+---		   Event Date = t-7 to t-1
+---		   Service Area = 430
+---		   Location = COMMUNITY HOSPITAL NORTH, COMMUNITY HOSPITAL SOUTH
+---		   Event Types = Discharges
+---		   Unit = HPI CHN MED/SURG, HPI CHS MED/SURG, HPI CHS ICU
+---		   Exclude: Deceased Patients
+---		   Patient Class = Inpatient, Rehab Inpatient, Home Inpatient, Newborn, Surgery Admit
+--Patient Living Status = Alive
+--Patient Rules = HPI Coding Status Complete
+
+
+IF OBJECT_ID(N'tempdb..##TempCHIP') IS NOT NULL DROP TABLE ##TempCHIP
+IF OBJECT_ID(N'tempdb..#cteProviders') IS NOT NULL DROP TABLE #cteProviders
+IF OBJECT_ID(N'tempdb..#TempFinal') IS NOT NULL DROP TABLE #TempFinal
+
+
+--DECLARE @STARTDATE AS DATE = '2026-10-01'
+--DECLARE @ENDDATE AS DATE = '2026-10-07'
+DECLARE @sql      varchar(8000)
+      , @path     varchar(100)
+      , @filename varchar(100)
+	  , @OQ       nvarchar(max)  /*holds the OPENQUERY statements that need the date parameters*/
+
+DECLARE @prevAdvancedOptions int
+DECLARE @prevXpCmdshell int
+
+set @path = 'C:\Users\Public\PressGaney\PressGaney_Output\'
+set @filename
+     = 'HPI_CH_IP_Daily_' + CONVERT(NVARCHAR(10), @STARTDATE, 112) + '_to_' + CONVERT(NVARCHAR(10), @ENDDATE, 112)
+
+
+
+/*=====================================================================
+  #cteProviders (no date parameters - static OPENQUERY)
+  =====================================================================*/
+select
+	prov_id
+	,REPLACE(prov_name, ',', '') AS prov_name
+	,ProviderSpeciality
+into #cteProviders
+from OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], '
+	select
+		cs.prov_id
+		,COALESCE(cs.EXTERNAL_NAME, cs.prov_name) AS prov_name
+		,zcsp.name AS ProviderSpeciality
+	from CLARITY.ORGFILTER.clarity_ser cs
+		left join CLARITY.ORGFILTER.CLARITY_SER_SPEC ss on cs.PROV_ID = ss.PROV_ID and ss.line = 1
+		left join CLARITY.ORGFILTER.ZC_SPECIALTY zcsp on ss.SPECIALTY_C = zcsp.SPECIALTY_C
+')
+
+/*cteConfidentialPatients was defined but never referenced (filter commented out) - not pulled*/
+
+
+
+/*=====================================================================
+  #TempFinal - Clarity columns for the final select
+  (raw columns only; formatting stays in the local final select below)
+  =====================================================================*/
+CREATE TABLE #TempFinal (
+	 hsp_account_id        numeric(18,0)
+	,pat_enc_csn_id        numeric(18,0)
+	,hospital_area_id      numeric(18,0)
+	,pat_last_name         varchar(200)
+	,pat_middle_name       varchar(200)
+	,pat_first_name        varchar(200)
+	,add_line_1            varchar(254)
+	,add_line_2            varchar(254)
+	,city                  varchar(100)
+	,state_abbr            varchar(50)
+	,zip                   varchar(50)
+	,pat_mrn_id            varchar(50)
+	,birth_date            datetime
+	,sex_abbr              varchar(50)
+	,language_c            varchar(66)
+	,admit_source_abbr     varchar(50)
+	,department_name       varchar(254)
+	,bed_id                varchar(50)
+	,pat_class_name        varchar(254)
+	,pat_service_name      varchar(254)
+	,adm_date_time         datetime
+	,disch_date_time       datetime
+	,patient_status_c      varchar(66)
+	,drg_number            varchar(50)
+	,icu_department_id     numeric(18,0)
+	,admission_prov_id     varchar(18)
+	,attending_prov_id     varchar(18)
+	,email_address         varchar(254)
+	,no_email_reason       varchar(254)
+	,pat_home_phone        varchar(50)
+	,pat_living_stat_name  varchar(254)
+	,survey_opt_out_yn     varchar(1)
+	,admission_type_title  varchar(254)
+);
+
+SET @OQ = N'
+INSERT INTO #TempFinal
+SELECT * FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''
+	select
+	eh.hsp_account_id
+	,eh.pat_enc_csn_id
+	,eh.hospital_area_id
+	,p.pat_last_name
+	,p.pat_middle_name
+	,p.pat_first_name
+	,p.add_line_1
+	,p.add_line_2
+	,p.city
+	,zcts.abbr AS state_abbr
+	,p.zip
+	,p.pat_mrn_id
+	,p.birth_date
+	,zcs.abbr AS sex_abbr
+	,zcl.language_c
+	,zcas.ABBR AS admit_source_abbr
+	,cd.department_name
+	,eh.bed_id
+	,zcpc.name AS pat_class_name
+	,zcps.name AS pat_service_name
+	,a.adm_date_time
+	,a.disch_date_time
+	,a.PATIENT_STATUS_C
+	,drg.drg_number
+	,icu.department_id AS icu_department_id
+	,eh.admission_prov_id
+	,a.attending_prov_id
+	,p.email_address
+	,zcer.name AS no_email_reason
+	,a.pat_home_phone
+	,pls.name AS pat_living_stat_name
+	,e2.survey_opt_out_yn
+	,amt.title AS admission_type_title
+	from CLARITY.ORGFILTER.PAT_ENC_HSP eh
+		left join CLARITY.ORGFILTER.clarity_dep cd ON eh.department_id = cd.department_id
+		left join CLARITY.ORGFILTER.pat_enc_hsp_2 e2 on eh.pat_enc_csn_id = e2.pat_enc_csn_id
+		left join CLARITY.ORGFILTER.f_pat_icu_location icu on eh.pat_enc_csn_id = icu.pat_enc_csn_id
+		left join CLARITY.ORGFILTER.ZC_ADM_SOURCE zcas on eh.admit_source_c = zcas.admit_source_c
+		left join CLARITY.ORGFILTER.ZC_PAT_CLASS zcpc on eh.adt_pat_class_c = zcpc.adt_pat_class_c
+		left join CLARITY.ORGFILTER.zc_pat_service zcps on eh.hosp_serv_c = zcps.hosp_serv_c
+		left join CLARITY.ORGFILTER.PATIENT p ON eh.PAT_ID = p.PAT_ID
+		left join CLARITY.ORGFILTER.patient_4 p4 on p.pat_id = p4.pat_id
+		left join CLARITY.ORGFILTER.zc_pat_living_stat pls on p4.pat_living_stat_c = pls.pat_living_stat_c
+		left join CLARITY.ORGFILTER.zc_no_email_reason zcer on p4.no_email_reason_c = zcer.no_email_reason_c
+		left join CLARITY.ORGFILTER.zc_tax_state zcts on p.state_c = zcts.tax_state_c
+		left join CLARITY.ORGFILTER.zc_sex zcs on p.sex_c = zcs.rcpt_mem_sex_c
+		left join CLARITY.ORGFILTER.zc_language zcl on p.language_c = zcl.language_c
+		left join CLARITY.ORGFILTER.hsp_account a ON eh.hsp_account_id = a.hsp_account_id
+		left join CLARITY.ORGFILTER.CLARITY_DRG drg ON a.FINAL_DRG_ID = drg.DRG_ID
+		left join CLARITY.ORGFILTER.zc_mc_adm_type AMT ON a.admission_type_c = AMT.admission_type_c
+	where 1=1
+		and a.SERV_AREA_ID in (430)
+		and a.ACCT_BASECLS_HA_C = 1 /*Inpatient*/
+		and eh.ADT_PAT_CLASS_C IN (101, 107, 108, 132, 167) /*Inpatient, Newborn, Surgery Admit, Rehab Inpatient, Home Inpatient*/
+		and eh.ADT_PATIENT_STAT_C in (3) /*Discharged*/
+		and eh.DEPARTMENT_ID IN (43005005001, 43004001001, 43005005002) /*HPI CHS MED/SURG, HPI CHN MED/SURG, HPI CHS ICU*/
+		and p4.pat_living_stat_c = 1 /*Alive*/
+		and CONVERT(DATE, a.coding_datetime) between ''''' + CONVERT(char(8), @STARTDATE, 112) + ''''' and ''''' + CONVERT(char(8), @ENDDATE, 112) + '''''
+		and a.coding_status_c IN (4) /*Completed*/
+'')';
+--PRINT @OQ
+EXEC (@OQ);
+
+
+
+/*=====================================================================
+  Final select - local
+  =====================================================================*/
+select
+	'IN0101' PressGaneySurgeyDesignator
+	,case
+		when f.hospital_area_id like '43004%' or f.hospital_area_id like '43005%' then 6987
+		when f.hospital_area_id like '43006%' then 7979
+	end HospitalAreaClientID --6987 = community, 7979 = NW hospital hardcode
+	,f.pat_last_name LastName
+	,ISNULL(f.pat_middle_name, '') MiddleInitial
+	,f.pat_first_name FirstName					
+	,Replace(f.add_line_1, ',', '') PatientStreetAddressLine1		
+	,Replace(f.add_line_2, ',', '') PatientStreetAddressLine2			
+	,f.city PatientCity								
+	,f.state_abbr PatientState						
+	,f.zip PatientZIP
+	,f.hsp_account_id HospitalAccountID 
+	,f.pat_enc_csn_id CSN 				
+	,f.pat_mrn_id MRN
+	,REPLACE(CONVERT(VARCHAR(10), f.birth_date, 101), '/', '') PatientDOB
+	,dbo.GetAge(f.birth_date, getdate()) as PatientAge
+	,f.sex_abbr sex_abbr								
+	,s.code lang									
+	,f.admit_source_abbr as OriginPoint
+	,'' as MedicareID												
+	,f.department_name PGHospUnit					
+	,f.bed_id Bed									 
+	,f.pat_class_name PatientClass						
+	,f.pat_service_name PatientService						
+	,REPLACE(CONVERT(VARCHAR(10), f.adm_date_time, 101), '/', '') AdmitDate		
+	,REPLACE(CONVERT(VARCHAR(10), f.disch_date_time, 101), '/', '') DischargeDate	
+	,ISNULL(f.PATIENT_STATUS_C, '') HARDischargeDisposition		
+	,right(f.drg_number, 3) as DRG 									
+	,case when f.icu_department_id is not null then 1 else 0 end as ICUStayIndicator 
+	,f.admission_prov_id AdmittingProviderID  
+	,admp.ProviderSpeciality AdmittingProviderSpeciality 
+	,admp.prov_name AdmittingProviderName 
+	,f.attending_prov_id AttendingProviderID 
+	,attp.ProviderSpeciality AttendingProviderSpeciality 
+	,attp.prov_name AttendingProviderName 
+	,ISNULL(f.email_address, '') EmailAddress 
+	,ISNULL(case when f.email_address is null then f.no_email_reason end, '') PatientReasonforNoEmail 
+	,replace(f.pat_home_phone,'-','') PatientCellPhone
+	,CASE WHEN f.pat_living_stat_name = 'Alive' THEN 'N' 	
+			WHEN f.pat_living_stat_name = 'Deceased' THEN 'Y' 
+			ELSE f.pat_living_stat_name END AS PatientLivingStatus
+	,isnull(f.survey_opt_out_yn, 'N') SurveyOptOut 
+	,'N' as FreeSpace 
+	,case when f.birth_date > DATEADD(month, -2, getdate()) then 'Y' else 'N' end NewbornAdmission 
+    ,f.department_name FirstEventDept						
+	,f.admission_type_title AdmissionType				
+	,'$' EORIndicator	
+INTO ##TempCHIP
+from #TempFinal f
+	left join #cteProviders admp on f.admission_prov_id = admp.prov_id
+	left join #cteProviders attp on f.attending_prov_id = attp.prov_id
+	INNER join [map].[SurveyLanguageCodes] S ON f.language_c = s.language_c --Created mapping table for languages ZH
+
+
+
+/*=====================================================================
+  Export - unchanged
+  =====================================================================*/
+DECLARE @query varchar(8000) = 'SET NOCOUNT ON;' + 
+'SELECT CAST(PressGaneySurgeyDesignator as varchar(8)), '','',' + 
+'CAST(HospitalAreaClientID as varchar(7)), '','',' + 
+'CAST(LastName as varchar(25)), '','',' +
+'CAST(MiddleInitial as varchar(1)), '','',' +
+'CAST(FirstName as varchar(20)), '','',' +
+'CAST(PatientStreetAddressLine1 as varchar(40)), '','',' +
+'CAST(PatientStreetAddressLine2 as varchar(40)), '','',' +
+'CAST(PatientCity as varchar(25)), '','',' +
+'CAST(PatientState as varchar(2)), '','',' +
+'CAST(PatientZIP as varchar(10)), '','',' +
+'CAST(HospitalAccountID as varchar(9)), '','',' +
+'CAST(CSN as varchar(11)), '','',' +
+'CAST(MRN as varchar(20)), '','',' +
+'CAST(PatientDOB as varchar(10)), '','',' +
+'CAST(PatientAge as varchar(3)), '','',' +
+'CAST(sex_abbr as varchar(1)), '','',' +
+'CAST(lang as varchar(50)), '','',' +
+'CAST(OriginPoint as varchar(20)), '','',' +
+'CAST(MedicareID as varchar(20)), '','',' +
+'CAST(PGHospUnit as varchar(50)), '','',' +
+'CAST(Bed as varchar(50)), '','',' +
+'CAST(PatientClass as varchar(50)), '','',' +
+'CAST(PatientService as varchar(50)), '','',' +
+'CAST(AdmitDate as varchar(10)), '','',' +
+'CAST(DischargeDate as varchar(10)), '','',' +
+'CAST(HARDischargeDisposition as varchar(2)), '','',' +
+'CAST(DRG as varchar(4)), '','',' +
+'CAST(ICUStayIndicator as varchar(1)), '','',' +
+'CAST(AdmittingProviderID as varchar(50)), '','',' +
+'CAST(AdmittingProviderSpeciality as varchar(50)), '','',' +
+'CAST(AdmittingProviderName as varchar(50)), '','',' +
+'CAST(AttendingProviderID as varchar(50)), '','',' +
+'CAST(AttendingProviderSpeciality as varchar(50)), '','',' +
+'CAST(AttendingProviderName as varchar(50)), '','',' +
+'CAST(EmailAddress as varchar(60)), '','',' +
+'CAST(PatientReasonforNoEmail as varchar(30)), '','',' +
+'CAST(PatientCellPhone as varchar(12)), '','',' +
+'CAST(PatientLivingStatus as varchar(1)), '','',' +
+'CAST(SurveyOptOut as varchar(1)), '','',' +
+'CAST(FreeSpace as varchar(1)), '','',' +
+'CAST(NewbornAdmission as varchar(1)), '','',' +
+'CAST(FirstEventDept as varchar(20)), '','',' +
+'CAST(AdmissionType as varchar(20)), '','',' +
+'CAST(EORIndicator as varchar(1)) FROM ##TempCHIP'
+
+
+
+select @prevAdvancedOptions = cast(value_in_use as int) from master.sys.configurations where name = 'show advanced options'
+select @prevXpCmdshell = cast(value_in_use as int) from master.sys.configurations where name = 'xp_cmdshell'
+
+
+if (@prevAdvancedOptions = 0)
+begin
+    exec sp_configure 'show advanced options', 1
+    reconfigure
+end
+
+if (@prevXpCmdshell = 0)
+begin
+    exec sp_configure 'xp_cmdshell', 1
+    reconfigure
+end
+
+
+/*Execute Command*/
+
+select @sql
+    = 'sqlcmd -S ' + @@SERVERNAME + ' -d HPIDW -E -h -1 -Q "' + @query + '"	-o "' + @path + @filename
+      + '.csv" -s ""'
+
+
+
+exec master..xp_cmdshell @sql
+
+
+
+if (@prevXpCmdshell = 0)
+begin
+    exec sp_configure 'xp_cmdshell', 0
+    reconfigure
+end
+
+if (@prevAdvancedOptions = 0)
+begin
+    exec sp_configure 'show advanced options', 0
+    reconfigure
+end
+
+/*Moved out of the IF block above - previously only dropped when advanced options was off*/
+DROP TABLE ##TempCHIP
+DROP TABLE #cteProviders
+DROP TABLE #TempFinal
+
+END
+
+
+
+
+
+
+
+
+
+/*======================OLD EXTRACTS REPLACED 10-19-2026=================
+
+/*
+-- =============================================
+-- Author:		Zeke Herrera
+-- Create date: 08/30/2023
+-- Description:	compiles data for press ganey export
+-- Change Control:
+12/14/2023: Zeke Herrera: Added logic to strip commas out of the address line
+12/14/2023: Zeke Herrera: Adjusting stored procedure to be sent out daily
+1/18/2023: Zeke Herrera: Where clause in final statement now using a.Coding_datetime instead of a.Completion_dt_tm. Coding_status IN (4) - Completed has also been added. 
+1/23/2024: Eric Silvestri: Updated CTEConfidentialPatients to include 430 Service area only 
+12/30/2025: Chris Cross: Updated Admission Source from zcas.ADMIT_SOURCE_C to zcas.ABBR
+-- =============================================
+*/
+
+ALTER PROCEDURE [rpt].[spPG_HPI_CH_Inpatient_Daily] @STARTDATE date, @ENDDATE date
 AS
 
 BEGIN
@@ -253,5 +607,8 @@ begin
 DROP TABLE ##TempCHIP
 
 END
-END
+END
+
+
+*/
 GO
