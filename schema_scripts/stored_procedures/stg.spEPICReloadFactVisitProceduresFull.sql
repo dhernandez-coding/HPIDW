@@ -100,7 +100,13 @@ OPENQUERY ([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
 		--					 ) /*CPT and ICD Procedures*/
 
 		AND (PX.SOURCE_KEY IN (11,13,22,23)
-			OR (PX.SOURCE_KEY IN (21) AND PX.PX_CPT_REV_CODE in (''0360'',''0361''))
+			OR (PX.SOURCE_KEY IN (21) AND PX.PX_CPT_REV_CODE in (''0360'',''0361'',''0362'',''0367'',''0369'' -- Operating Room Services
+																--,''0320'',''0321'',''0322'',''0323'',''0324'' --Radiology Diagnostic
+																--,''0330'',''0331'',''0332'',''0333'',''0335'' --Radiology Therapeutic/Chemo
+																--,''0340'',''0341'',''0342'',''0343'',''0344'' --Nuclear Med
+																--,''0350'',''0351'',''0352'',''0359'' --CT
+																)
+				)
 			)
 		AND COALESCE(a.PRIM_ENC_CSN_ID,csn.PAT_ENC_CSN_ID) is NOT null
 ') sub

@@ -44,6 +44,7 @@ FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM],
         ON eap.PROC_ID = cdp.PROCEDURE_ID
     WHERE 1=1
         -- AND eap.PROC_CODE = ''G0444''
+		AND eap.PROC_CODE not in (''O457813'',''NUR121'') --These have duplicates in the CLARITY_EAP
         AND eap.RECORD_STATE_EAP_C IS NULL
 ') AS ep;
 
