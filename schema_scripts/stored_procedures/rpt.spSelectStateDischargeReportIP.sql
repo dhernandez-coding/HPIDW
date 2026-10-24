@@ -1,62 +1,11 @@
-/*
-================================================================================
- REWRITE NOTES - spSelectStateDischargeReportIP (read before deploying)
-================================================================================
- Same pattern as the OP rewrite: replace per-account correlated linked-server
- subqueries with bulk OPENQUERY pulls into local temp tables, scoped by a
- shared filter clause built once and reused (NOT a giant account-ID list -
- that blew past OPENQUERY's 8000-character limit on the OP version).
+CREATE PROCEDURE [rpt].[spSelectStateDischargeReportIP_NEW]
 
- Differences from the OP proc that shaped this rewrite:
-   - Diagnosis/procedure codes here come from V_CODING_ALL_DX_PX_LIST
-     (filtered by REF_BILL_CODE_SET_NAME = 'ICD-10-CM' or 'ICD-10-PCS'),
-     not HSP_ACCT_DX_LIST/HSP_TRANSACTIONS like the OP version.
-   - clarity_drg IS used here (drg.DRG_NUMBER -> the 'drg' field) - kept.
-   - ZC_DX_POA (pos) IS used here (feeds the ICD-10 padding/formatting
-     logic for ecode/princ_diag/oth_diag_code) - kept, unlike the OP
-     version where the equivalent join was dead code.
-   - clarity_edg (dx) is joined in the diagnosis subqueries but NONE of
-     its columns are ever referenced in the output - dropped as dead,
-     same category of finding as the OP rewrite's dead joins.
-   - ZC_MC_ADM_SOURCE (zcadmin), PAT_ENC_HSP (enc), CLARITY_DEP (dep) are
-     all joined in the outer driver but never referenced - dropped.
-   - Preserved as-is, not "fixed": the original's oth_diag_code subquery
-     does an INNER JOIN to ZC_DX_POA while princ_diag does a LEFT JOIN to
-     the same table - meaning an other-diagnosis row with no POA match
-     gets silently dropped while the principal diagnosis wouldn't be.
-     Replicated exactly via a HasPOSMatch flag rather than picking one
-     behavior for you - worth a second look on your end, this may be an
-     original inconsistency rather than intentional.
-   - Same two latent type-mixing bugs as the OP proc, fixed the same way:
-     'admit_source' and 'pat_disch_status' mix string literals with a
-     raw int column across CASE branches, which resolves the whole
-     expression to int by SQL Server's type precedence rules. Explicit
-     CONVERT(varchar(10), ...) added to the else branches.
-   - Same HSP_ACCOUNT_ID / PAT_ID legacy alpha-prefix issue as the OP
-     proc (values like 'Z2076144'): HSP_ACCOUNT_ID's >= 600000000 filter
-     uses TRY_CAST, and PAT_ID is declared varchar rather than int.
-   - 'pat_gender', 'pat_race', and 'pat_marital_stat' have no ELSE branch
-     in the original - an unmapped or NULL source code silently produces
-     NULL rather than a fallback value. Left as-is; flagging in case
-     that's not intentional.
-   - Dropped 'AND HSP.HSP_ACCOUNT_ID IS NOT NULL' from the original filter
-     as genuinely redundant (it's the join key from a non-null column) -
-     not a behavior change, just noise removed.
 
- Verify before running against production:
-   - Column types in the CREATE TABLE statements are reasonable guesses;
-     check against the real Clarity DDL, especially BIRTH_WEIGHT and
-     DRG_NUMBER's actual precision/length.
-   - This assumes REF_BILL_CODE, DX_POA_C, PX_DATE, LINE, SOURCE_name, and
-     REF_BILL_CODE_SET_NAME all live on V_CODING_ALL_DX_PX_LIST as used
-     in the original query.
-================================================================================
-*/
 
-CREATE PROCEDURE [rpt].[spSelectStateDischargeReportIP]
  @startdate datetime = null,
  @enddate datetime = null,
- @Location int = 43004001 --HPI CHN
+ @Location int = null
+ --43004001 --HPI CHN
  	--43005005 --HPI CHS
 	--43006001 --HPI NWSH
 as begin
@@ -512,18 +461,18 @@ DECLARE @Dt XML=
 						end  as 'admit_type',
 
 					  case CONVERT(varchar,acct.PATIENT_STATUS_C)
-									when 42 then '20'
-									when 41 then '20'
-									when 40 then '20'
-									when 100 then '50'
-									when 10 then '04'
-									when 09 then '02'
-									when 30 then '02'
-									 else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
-											   then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
-											   else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
-										  end
-										   end as 'pat_disch_status',
+				  when 42 then '20'
+				  when 41 then '20'
+				  when 40 then '20'
+				  when 100 then '50'
+				  when 10 then '04'
+				  when 09 then '02'
+				  when 30 then '02'
+				  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
+								then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+								else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
+						   end
+					end as 'pat_disch_status',
 
 					convert(numeric,acct.BIRTH_WEIGHT, 100) as 'birth_weight',
 
@@ -598,7 +547,7 @@ DECLARE @Dt XML=
 					else acct.BENEFIT_PLAN_NAME
 					end  as 'prim_payer_name',
 
-								 case
+					case
 					 /* Payer-specific overrides must come first: several of these share a
 					    FINANCIAL_CLASS with a much broader payer group below, so without
 					    checking benefit_plan_id/payor_id up front, the financial-class

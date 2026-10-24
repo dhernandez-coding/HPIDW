@@ -1,26 +1,51 @@
--- =============================================
--- Author:		<Author,,Name>
--- Create date: <Create Date,,>
--- Description:	<Description,,>
--- =============================================
-CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED_export]
-	-- Add the parameters for the stored procedure here
-	@Location int,
-	@startdate datetime,
-	@enddate datetime,
-	@reportingyear int,
-	@reportingperiod int
-AS
-BEGIN
-	
+CREATE PROCEDURE [rpt].[spSelectStateDischargeReportOP]
+ @startdate datetime null= null,
+ @enddate datetime null= null,
+ @Location int = 43004001 --HPI CHN
+ 	--43005005 --HPI CHS
+						--43006001 --HPI NWSH
+as begin
 
---DECLARE @startdate datetime = '7/1/2024'
---DECLARE @enddate datetime = '8/1/2024'
---DECLARE @reportingyear int = YEAR(@startdate)
---DECLARE @reportingperiod int = MONTH(@startdate)
+
+
+SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
+
+
+SET @enddate = IsNull(@enddate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
+DECLARE @reportingyear int = YEAR(@startdate)
+DECLARE @reportingperiod int = MONTH(@startdate)
 --DECLARE @Location int = 43004001 --HPI CHN
 --						--43005005 --HPI CHS
 --						--43006001 --HPI NWSH
+
+
+
+--select * from #TEMPChargeFilter
+
+IF EXISTS(select * from TEMPDB.INFORMATION_SCHEMA.TABLES where TABLE_NAME LIKE '#TEMPChargeFilter%')
+BEGIN 
+	Print 'Dropping #TEMPChargeFilter'
+	drop table #TEMPChargeFilter
+END
+
+--IF OBJECT_ID(N'tempdb..#TEMPChargeFilter') IS NOT NULL
+--BEGIN
+--DROP TABLE #TEMPChargeFilter
+--END
+
+select 
+	t.HSP_ACCOUNT_ID
+	,SUM(t.TX_AMOUNT) Charges
+INTO #TEMPChargeFilter
+from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_TRANSACTIONS t
+where 1=1
+	AND t.SERV_AREA_ID in (425,430)
+	AND t.TX_TYPE_HA_C = 1 /*Charges*/
+	AND LEFT(t.UB_REV_CODE_ID,2) IN (36,48,49,75,76)
+group by t.HSP_ACCOUNT_ID
+
+
+
 DECLARE @LocationName varchar(100) = (SELECT case when @location = 43004001 then 'Community Hospital North'
 												  when @location = 43005005 then 'Community Hospital South'
 												  when @location = 43006001 then 'Northwest Surgical Hospital' end)
@@ -38,7 +63,6 @@ DECLARE @LocationMedicareNumber varchar(100) = (SELECT case when @location = 430
 												  when @location = 43006001 then '370192' end)
 
 
-
 /*Header XML*/
 DECLARE @Hd XML=
 	(
@@ -47,7 +71,7 @@ DECLARE @Hd XML=
 		3 AS 'reporting_type', /*2 - quarterly; 3 - monthly*/
 		@reportingperiod AS 'reporting_period',
 		@LocationMedicareNumber AS 'medicare_provider_no',
-		'E' as 'submission_type', /*O - Hospital Outpatient Surgery Data; I - Hospital Inpatient Data; E - Hospital Emergency Department Data*/
+		'O' as 'submission_type', /*O - Hospital Outpatient Surgery Data; I - Hospital Inpatient Data; E - Hospital Emergency Department Data*/
 		@LocationName as 'org_name',
 		(
 			SELECT
@@ -66,7 +90,6 @@ DECLARE @Hd XML=
 /*Detail XML*/
 DECLARE @Dt XML=
 	(
-
 	SELECT
 		(
 			SELECT
@@ -74,26 +97,28 @@ DECLARE @Dt XML=
 			ROW_NUMBER() OVER(ORDER BY hsp.pat_id ASC) AS '@id',
 		
 	   			(
-					 SELECT
+					SELECT
 					left(case 
 						 when p.PAT_MIDDLE_NAME is null 
 						 then p.pat_last_name +', '+ p.pat_first_name
 						 else p.pat_last_name +', '+ p.pat_first_name +' '+substring(p.PAT_MIDDLE_NAME,1,1) 
 						   end, 30) as 'pat_name',
-						case 
-							when p.add_line_1  = 'none' then 'Unknown'
-							when p.add_line_1 is null then 'Unknown'
-							when len(p.add_line_1) < 5 then 'Unknown'
-							else left(p.add_line_1,70)
-							end  as 'pat_address',
-						  Case when p.city is not null
-						 then p.city 
-						 else 'Oklahoma City'
-						end as 'pat_city',
-						 CASE WHEN st.abbr is null THEN 'ZZ' 
-							  WHEN LEN(st.abbr) > 2 THEN 'XX' 
-							  ELSE st.abbr END  as 'pat_state',
-					case when isnumeric(substring(p.zip,1,5)) = 1 then substring(p.zip,1,5) else 99990 end as 'pat_zip',
+						 CASE WHEN len(p.add_line_1) < 5 THEN 'Unknown' ELSE left(p.add_line_1,70) end as 'pat_address',
+						  
+						 	CASE WHEN p.city is null THEN 'Oklahoma City' 
+							ELSE p.city END  as 'pat_city',
+						 case when st.abbr is null then 'ZZ'
+							  when LEN(st.abbr) > 2 then 'XX'  
+							  else st.abbr
+							  end as 'pat_state',
+						 
+						 Case 
+						 
+						 when isnumeric(substring(p.zip,1,5)) = 1 then substring(p.zip,1,5) 
+						 
+						  When LEN(Trim(CAST(p.zip as VARCHAR))) < 5 THEN 99990
+						
+						 else 99990 end as 'pat_zip',
 					case 
 						 when p.SEX_C = 1 then 'F'
 						 when p.SEX_C = 2 then 'M'
@@ -101,7 +126,7 @@ DECLARE @Dt XML=
 						 when p.SEX_C = 950 then 'U'
 						 when p.SEX_C = 951 then 'U'
 						 when p.SEX_C = 999 then 'U'
-						 ELSE 'U'
+						 else 'U'
 						  end as 'pat_gender',
 				   case 
 						 when r.PATIENT_RACE_C = 1 then 4
@@ -120,7 +145,6 @@ DECLARE @Dt XML=
 					   when p.ETHNIC_GROUP_C = 2 then 1
 					   when p.ETHNIC_GROUP_C = 3 then 6
 					   when p.ETHNIC_GROUP_C = 4 then 6
-				   when p.ETHNIC_GROUP_C is null then 6
 				   else 6
 						end as 'pat_ethnicity',
 
@@ -133,7 +157,7 @@ DECLARE @Dt XML=
 					  when p.MARITAL_STATUS_C = 6 then 'U'
 					  when p.MARITAL_STATUS_C = 7 then 'P'
 					  when p.MARITAL_STATUS_C = 100 then 'U'
-					  Else 'U'
+					  else 'U'
 					   end as 'pat_marital_stat',
 
 				convert(date,p.BIRTH_DATE,100) as 'pat_birth_date',
@@ -233,39 +257,78 @@ DECLARE @Dt XML=
 					end  as 'prim_payer_name',
 
 			 case
-				  when epm.FINANCIAL_CLASS = 100 then 1
-				  when epm.FINANCIAL_CLASS = 101 then 2
-				  when epm.FINANCIAL_CLASS = 6 then 4
-				  when epm.FINANCIAL_CLASS = 140 then 1
-				  when epm.FINANCIAL_CLASS = 150 then 1
-				  when epm.FINANCIAL_CLASS = 160 and payor_name like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 6
-						  when epm.FINANCIAL_CLASS = 160 and payor_name not like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 7
-				  when epm.FINANCIAL_CLASS = 170 then 1
-				  when epm.FINANCIAL_CLASS = 180 then 1
-				  when epm.FINANCIAL_CLASS = 190 then 1
-				  when epm.FINANCIAL_CLASS = 210 then 1
-				  when epm.FINANCIAL_CLASS = 220 then 2
-				  when epm.FINANCIAL_CLASS = 230 then 4
-				  when epm.FINANCIAL_CLASS = 240 then 5
-				  when epm.FINANCIAL_CLASS = 250 then 1
-				  when epm.FINANCIAL_CLASS = 260 then 1
-				  when epm.FINANCIAL_CLASS = 270 then 1
-				  when epm.FINANCIAL_CLASS = 280 then 1
-				  when epm.FINANCIAL_CLASS = 310 then 1
-				  When epm.FINANCIAL_CLASS is null then 1
-						  When epm.FINANCIAL_CLASS = 311 then 6
-				  else 7
-					 end as 'prim_payer_class',
+
+				
+
+
+
+
+			 when epm.FINANCIAL_CLASS in (100,140,150,170,180,190,210,250,260,270,280,310)
+				  --1
+/*
+HPI BUNDLED CASE AGREEMENTS
+HPI BUNDLED SELF-PAY CASE AGREEMENTS
+HPI CASH PAY PATIENTS
+CHICKASAW NATION- HCH PLUS 
+CHICKASAW NATION
+CHICKASAW NATION
+*/then 1 /*Commercial*/
+				  when epm.FINANCIAL_CLASS in (2,220,101)		  
+				  OR epp.BENEFIT_PLAN_ID in(2201104, 2201105) /*UHC Dual Complete*/
+				  then 2 /*Medicare*/
+				  when epm.FINANCIAL_CLASS in (1,3,215,401)
+				  OR epp.BENEFIT_PLAN_ID in(3000112, 3000304, 4000112, 4000201) /*Aetna*/				  
+				  OR epp.BENEFIT_PLAN_ID in(3000113,4000113,4000203) /*Humana*/		
+				  then 3 /*Medicaid*/ 
+				  when epm.FINANCIAL_CLASS in (6,230)
+				  OR epp.BENEFIT_PLAN_ID in (10301,10302,1400115,1700801,1702101,1702701,2200801,2201501,2201502,2201503,2300201,2300401,3000113, 4000113)--4
+/*
+AETNA BETTER HEALTH OF OKLAHOMA
+AETNA BETTER HEALTH MEDICAID KANCARE
+AETNA BETTER HEALTH OF OKLAHOMA
+OSU AETNA BETTER HEALTH ALTERNATE	
+UNITED HEALTHCARE DUAL COMPLETE HMO SNP
+UNITED HEALTHCARE DUAL COMPLETE PPO SNP
+*/then 4 /*VA or Military*/
+				  when epm.FINANCIAL_CLASS = 240 
+				  OR epp.BENEFIT_PLAN_ID in 
+				  (1800103,1800106,1801701,2400427) /*Hobby Lobby mapped to work comp*/
+				  then 5 /*Work Comp*/
+				  When epm.FINANCIAL_CLASS = 311
+				  or epp.BENEFIT_PLAN_ID in
+				  (1601904) /*Self Pay*/
+				  or epm.PAYOR_ID in 
+				  (10622) /*Self Pay*/
+				  then 6 /*Uninsured or Self Pay*/
+				  when epm.FINANCIAL_CLASS = 160 and epm.PAYOR_NAME like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 6 /*Uninsured or Self Pay*/
+				  when (epm.FINANCIAL_CLASS  in (160, 155) OR epp.BENEFIT_PLAN_ID in(1601903, 1601904,1602101,1550109,1600109,1800112) -- 7
+/*
+HUMANA
+HUMANA - GENERIC
+HUMANA MEDICARE SUPPLEMENT
+HUMANA CHOICECARE PPO
+HUMANA NATIONAL TRANSPLANT NETWORK
+HUMANA BEHAVIORAL HEALTH
+HUMANA MEDICARE ADVANTAGE PPO
+HUMANA MEDICARE ADVANTAGE HMO
+HUMANA MEDICARE ADVANTAGE PFFS
+HUMANA MEDICARE ADVANTAGE PPO
+HUMANA VETERANS
+HUMANA BEHAVIORAL TRICARE MENTAL HEALTH
+HUMANA HEALTHY HORIZONS
+HUMANA HEALTHY HORIZONS
+OSU HUMANA HEALTHY HORIZONS ALTERNATE
+*/) and epm.PAYOR_NAME not like '%COVID19 HRSA UNINSURED TESTING AND TREATMENT FUND%' then 7
+				  else 7 end as 'prim_payer_class',
 
      		convert(numeric,hsp.TOT_CHGS,100) as 'total_charges',
 			'0131' as 'bill_type',
-	
-		--case
-		--				when drg.DRG_NUMBER = '' then '9999'
-		--				else left(drg.drg_number, 1)+''+right(drg.DRG_NUMBER, 3)
-		--			end as 'drg',
-	
+			--case
+			--				when drg.DRG_NUMBER = '' then '9999'
+			--				else left(drg.drg_number, 1)+''+right(drg.DRG_NUMBER, 3)
+			--			end as 'drg',
 			'0' as 'icdv',
+		
 
 
 		(
@@ -277,6 +340,7 @@ DECLARE @Dt XML=
 						
 							)as 'princ_diag',
 								
+			--isnull(
 			(
 					select top (17)
 							CONCAT(	LTRIM((RTRIM(SUBSTRING(dx.current_icd10_list, CHARINDEX('.', dx.current_icd10_list) -3, 3))))
@@ -289,26 +353,20 @@ DECLARE @Dt XML=
 					
 					where hsp.hsp_account_id=diag.HSP_ACCOUNT_ID
 							and diag.LINE <>1
-						
-
 					for xml path(''), type, elements
 
-				)
-		
-		
-		from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].[HSP_ACCT_DX_LIST] diag with(nolock)
+				)--,' ')
+
+			from [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].[HSP_ACCT_DX_LIST] diag with(nolock)
 				join [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_edg dx with(nolock) on dx.dx_id=diag.dx_id
             
 
 			where hsp.hsp_account_id=diag.HSP_ACCOUNT_ID
 					and diag.LINE = 1
 					AND dx.current_icd10_list is not null
-			
-			
-			
-			
 			for xml auto, type
-		),
+			--for xml path(N'diag'), type
+			),
 		----------------  PROCEDURE AREA ------------------
 
 		(
@@ -359,7 +417,7 @@ DECLARE @Dt XML=
  
 		(
 			select
-			
+
 			RIGHT('0'+ CONVERT(VARCHAR,charge.UB_REV_CODE_ID),4)as 'rev_code' ,
 			CAST(ROUND(ISNULL(SUM(charge.QUANTITY),0), 0) as int) as 'units_service' ,
 			CAST(ROUND(ISNULL(SUM(charge.TX_AMOUNT),0), 0) as int) 'tot_charges_rev_cat'	
@@ -373,6 +431,7 @@ DECLARE @Dt XML=
 			for xml Path('charge'), Root('charges'),TYPE
 
 		)
+
 			FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PATIENT p
 
 						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].ZC_STATE st	ON st.STATE_C = p.STATE_C
@@ -383,31 +442,25 @@ DECLARE @Dt XML=
 						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].clarity_ser_2 ser2 ON ser2.PROV_ID = hsp.ATTENDING_PROV_ID
 						LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].ZC_MC_ADM_SOURCE zcadmin ON zcadmin.ADMISSION_SOURCE_C = hsp.ADMISSION_SOURCE_C
 			WHERE hsp.PAT_ID = p.PAT_ID
-					AND r.line = 1 
+					AND (r.line is null or r.line = 1) 
 			  		AND convert(numeric,hsp.TOT_CHGS,100) > 0
 					AND hsp.TOT_CHGS > 0
 			   				
 			for xml path(''), type
 	)
 
-	FROM [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCOUNT hsp
+	FROM #TEMPChargeFilter cf 
+		INNER JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].HSP_ACCOUNT hsp ON cf.HSP_ACCOUNT_ID = hsp.HSP_ACCOUNT_ID and cf.Charges > 0
 		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PATIENT p	ON hsp.PAT_ID = p.PAT_ID
-		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PAT_ENC_HSP enc on hsp.PRIM_ENC_CSN_ID = ENC.PAT_ENC_CSN_ID
+		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].PAT_ENC_HSP enc on hsp.PRIM_ENC_CSN_ID = enc.PAT_ENC_CSN_ID
 		LEFT JOIN [CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM].[CLARITY].[ORGFILTER].CLARITY_DEP dep on dep.DEPARTMENT_ID = enc.DEPARTMENT_ID
-		--LEFT JOIN ZC_STATE st ON st.STATE_C = p.STATE_C
-		-- JOIN PATIENT_RACE r ON r.pat_id = p.PAT_ID
-		--LEFT JOIN clarity.dbo.CLARITY_EPM epm	ON epm.PAYOR_ID = hsp.PRIMARY_PAYOR_ID
-		--LEFT JOIN clarity.dbo.clarity_epp epp	ON epp.BENEFIT_PLAN_ID = hsp.PRIMARY_PLAN_ID
-		--LEFT JOIN clarity.dbo.clarity_drg drg	ON drg.DRG_ID = hsp.FINAL_DRG_ID
-		--LEFT JOIN clarity.dbo.clarity_ser_2 ser2 ON ser2.PROV_ID = hsp.ATTENDING_PROV_ID
-		--LEFT JOIN clarity.dbo.ZC_MC_ADM_SOURCE zcadmin ON zcadmin.ADMISSION_SOURCE_C = hsp.ADMISSION_SOURCE_C
 
 	WHERE 1=1
 		--AND hsp.HSP_ACCOUNT_ID in (606203035,606203105,606201776) 
 		AND hsp.DISCH_DATE_TIME >= @startdate
 		AND hsp.DISCH_DATE_TIME <= @enddate
 		and hsp.CODING_STATUS_C = 4 -- Completed coding
-		AND hsp.ACCT_BASECLS_HA_C = 3
+		AND hsp.ACCT_BASECLS_HA_C = 2 /*Outpatient*/
 		AND hsp.HSP_ACCOUNT_ID >= 600000000
 		AND convert(numeric,hsp.TOT_CHGS,100) > 0
 		AND (hsp.ACCT_FIN_CLASS_C = 4 /*Self Pay*/
@@ -421,13 +474,15 @@ DECLARE @Dt XML=
 								--43004001 --HPI CHN
 								--,43005005 --HPI CHS
 								--,43006001 --HPI NWSH
-								)  
-		  order by '@id'
+								) 
+		--AND hsp.HSP_ACCOUNT_ID in (606262838,606233354)
+
+	  order by '@id'
 			
-			for XML Path ('patientrecord'), TYPE
-			)
-		 for XML Path('patientrecords'), TYPE
-		 )
+		for XML Path ('patientrecord'), TYPE
+		)
+	 for XML Path('patientrecords'), TYPE
+	 )
 
 /*Detail XML*/
 DECLARE @Tr XML=
@@ -442,5 +497,5 @@ SELECT
 	,@Dt
 	,@Tr
 for XML Path('hci_data'), TYPE;
-END
+end
 GO

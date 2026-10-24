@@ -1,62 +1,19 @@
-/*
-================================================================================
- REWRITE NOTES - spSelectStateDischargeReportED (read before deploying)
-================================================================================
- Same pattern as the OP and IP rewrites: replace per-account correlated
- linked-server subqueries with bulk OPENQUERY pulls into local temp tables,
- scoped by a shared filter clause built once and reused (not a giant
- account-ID list - that hit OPENQUERY's 8000-character limit on the OP proc).
+CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED_NEW]
 
- This proc is structurally almost identical to the OP proc: same source
- tables for diagnoses (HSP_ACCT_DX_LIST + clarity_edg), ecode
- (V_CODING_ALL_DX_PX_LIST), and procedures/charges (HSP_TRANSACTIONS).
- Differences from OP/IP that shaped this rewrite:
-   - ACCT_BASECLS_HA_C = 3 (Emergency), submission_type = 'E'.
-   - prim_payer_class has one extra branch not present in OP/IP:
-     "WHEN epm.FINANCIAL_CLASS IS NULL THEN 6" - kept.
-   - Self-pay exclusion list has 6 entries (matches OP, not IP's 7 -
-     IP adds 'INTEGRIS MIAMI HOSPICE').
-   - drg (clarity_drg) is joined but the 'drg' output field is commented
-     out in the original - genuinely dead here, unlike IP where it's
-     used. Dropped.
-   - BIRTH_WEIGHT is likewise joined/available but commented out in the
-     original - not pulled.
-   - ZC_MC_ADM_SOURCE (zcadmin), PAT_ENC_HSP (enc), CLARITY_DEP (dep),
-     and ZC_DX_POA (pos) are all joined but never referenced in any live
-     output column - dropped as dead, same category of finding as the
-     OP/IP rewrites.
-   - princ_cpt_proc has a few extra null/blank guards compared to OP's
-     version (Trim(...) = '' checks in addition to IS NULL) - preserved
-     exactly.
-   - Same two latent type-mixing bugs as OP/IP, fixed the same way:
-     'point_origin' and 'pat_disch_status' mix string literals with a
-     raw int column across CASE branches, which silently resolves the
-     whole expression to int by SQL Server's type precedence rules.
-     Explicit CONVERT(varchar(10), ...) added to the else branches.
-   - Same HSP_ACCOUNT_ID / PAT_ID legacy alpha-prefix issue as the other
-     two procs: TRY_CAST guard on the >= 600000000 filter, PAT_ID
-     declared varchar rather than int.
-   - 'pat_gender', 'pat_race', and 'pat_marital_stat' have no ELSE
-     branch in the original - an unmapped or NULL source code silently
-     produces NULL rather than a fallback value. Left as-is, flagging
-     in case that's not intentional (same note as IP).
 
- Verify before running against production:
-   - Column types in the CREATE TABLE statements are reasonable guesses;
-     check against the real Clarity DDL.
-================================================================================
-*/
-
-CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED]
  @startdate datetime = null,
  @enddate datetime = null,
- @Location int = 43004001 --HPI CHN
- 	--43005005 --HPI CHS
-	--43006001 --HPI NWSH
-as begin
+ @Location int = null
+ --43004001 --HPI CHN
+ 	--DECLARE @Location int = 43005005 --HPI CHS
+	--DECLARE @Location int = 43006001 --HPI NWSH
+
+AS BEGIN
 
 SET NOCOUNT ON;
 
+--DECLARE @startdate datetime = '2026-01-01'
+--DECLARE @enddate datetime = '2026-08-31'
 SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
 SET @enddate   = IsNull(@enddate,   DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
 
@@ -527,18 +484,18 @@ DECLARE @Dt XML=
 					 end  as 'admit_type',
 
 				 case CONVERT(varchar,acct.PATIENT_STATUS_C)
-					  when 42 then '20'
-					  when 41 then '20'
-					  when 40 then '20'
-					  when 100 then '50'
-					  when 10 then '04'
-					  when 09 then '02'
-					  when 30 then '02'
-					  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
+				  when 42 then '20'
+				  when 41 then '20'
+				  when 40 then '20'
+				  when 100 then '50'
+				  when 10 then '04'
+				  when 09 then '02'
+				  when 30 then '02'
+				  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
 								then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
 								else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
 						   end
-						end as 'pat_disch_status',
+					end as 'pat_disch_status',
 
 				 ( Select top (6)
 					CONCAT(LTRIM((RTRIM(SUBSTRING(ecode.ref_bill_code, CHARINDEX('.',  ecode.ref_bill_code)-3, 3))))
@@ -708,5 +665,5 @@ IF OBJECT_ID('tempdb..#TEMPEcode')        IS NOT NULL DROP TABLE #TEMPEcode;
 IF OBJECT_ID('tempdb..#TEMPTransactions') IS NOT NULL DROP TABLE #TEMPTransactions;
 IF OBJECT_ID('tempdb..#TEMPProcedures')   IS NOT NULL DROP TABLE #TEMPProcedures;
 
-end
+END
 GO
