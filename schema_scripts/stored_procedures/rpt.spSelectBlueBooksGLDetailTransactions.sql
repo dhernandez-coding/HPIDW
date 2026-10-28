@@ -1,4 +1,4 @@
-CREATE PROCEDURE rpt.spSelectBlueBooksGLDetailTransactions
+CREATE PROCEDURE [rpt].[spSelectBlueBooksGLDetailTransactions]
 	@Year int
 	,@Period int
 	,@Practice varchar(10)
@@ -7,6 +7,7 @@ AS
 SELECT 
 	a.GLAccountNumber, 
 	a.GLAccountType, 
+	a.GLAccountLocation,
 	l.GLTrxDate,
 	l.GLTrxJournalEntry,
 	l.GLTrxOriginSource,
