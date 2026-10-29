@@ -1,4 +1,4 @@
-CREATE TABLE [stg].[THPTransactions_Backup_20260921] (
+CREATE TABLE [stg].[THPTransactions_Backup_20261028] (
     [Trans_Number] NVARCHAR(50) NULL,
     [Type] NVARCHAR(100) NULL,
     [Entered_Last_Modified] DATETIME NULL,
