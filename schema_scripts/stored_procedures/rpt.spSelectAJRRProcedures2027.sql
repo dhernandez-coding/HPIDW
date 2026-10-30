@@ -32,6 +32,7 @@
   only the needed rows cross the link. All joins / aggregation are local.
 ==============================================================================*/
 CREATE   PROCEDURE [rpt].[spSelectAJRRProcedures2027]
+    @ExportToTable BIT = 0   -- 1 = write results to rpt.AJRRProcedures2027_Export (used by the CSV export proc)
 AS
 BEGIN
 SET NOCOUNT ON;
@@ -79,7 +80,7 @@ DECLARE @HarFilter NVARCHAR(MAX) = N'
 
 DROP TABLE IF EXISTS #CASE, #PROCLINE, #CODING, #PAT, #RACE, #SURG, #TIMING, #TOURN,
                      #ROBOT, #ANES, #IMPLANT, #VITALS, #TRIG, #PXCAND, #SIDE, #PX, #DX,
-                     #COM, #IMPLANTSTR, #ANESTYPE, #RACECODE, #TIMES, #VITALVAL;
+                     #COM, #IMPLANTSTR, #ANESTYPE, #RACECODE, #TIMES, #VITALVAL, #OUT;
 
 /*==============================================================================
   1. REMOTE PULLS (one OPENQUERY each)
@@ -599,7 +600,8 @@ GROUP BY V.LOG_ID;
   5. OUTPUT - Procedure Layout, 101 columns in layout order
 ==============================================================================*/
 SELECT
-     'AJRR'                                                             AS [Registry]
+     ROW_NUMBER() OVER (ORDER BY C.SURGERY_DATE, S.LOG_ID, S.Side) AS [ExportRowNum]
+    ,'AJRR'                                                             AS [Registry]
     ,'Hip and Knee Arthroplasty'                                        AS [Module]
     ,'2026'                                                             AS [Version]
     ,'Procedure'                                                        AS [SubmissionType]
@@ -723,6 +725,7 @@ SELECT
     ,@NR                                                                AS [Dx_Study_Peripros_Osteolys]
     ,@NR                                                                AS [Dx_Study_Pros_Impl_Loos]
     ,@NR                                                                AS [Pract_Spec_Infec_Dis]
+INTO #OUT
 FROM #SIDE S
 INNER JOIN #CASE C         ON C.LOG_ID = S.LOG_ID
 LEFT JOIN dim.AJRRFacility F ON F.REV_LOC_ID = C.REV_LOC_ID
@@ -750,10 +753,125 @@ CROSS APPLY (SELECT  CASE WHEN SC.CommaPos > 0 THEN LTRIM(RTRIM(LEFT(SURG.PROV_N
                           ELSE SA.AfterComma END AS FirstName) SN
 /* Length of stay in minutes */
 CROSS APPLY (SELECT DATEDIFF(MINUTE, C.HOSP_ADMSN_TIME, C.HOSP_DISCH_TIME) AS Mins) LOS
-ORDER BY C.SURGERY_DATE, S.LOG_ID, S.Side;
+
+/* Either return the result set (default) or persist it for the CSV export.
+   The export proc cannot capture this result with INSERT...EXEC because this
+   proc already uses INSERT...EXEC internally, and SQL Server cannot nest them. */
+IF @ExportToTable = 1
+BEGIN
+    DROP TABLE IF EXISTS rpt.AJRRProcedures2027_Export;
+    SELECT * INTO rpt.AJRRProcedures2027_Export FROM #OUT;
+END
+ELSE
+BEGIN
+    SELECT
+     [Registry]
+    ,[Module]
+    ,[Version]
+    ,[SubmissionType]
+    ,[RegistryAccountID]
+    ,[InstitutionName]
+    ,[InstitutionNPI]
+    ,[Hospital_ASC_Name]
+    ,[Hospital_ASC_NPI]
+    ,[Patient_MRN]
+    ,[PatSSN]
+    ,[PatFirstName]
+    ,[PatMiddleName]
+    ,[PatLastName]
+    ,[PatDOB]
+    ,[PatDeathDate]
+    ,[PatSex]
+    ,[PatGender]
+    ,[PatRace]
+    ,[PatEthnicity]
+    ,[PatCity]
+    ,[PatState]
+    ,[PatZip]
+    ,[PatCountry]
+    ,[PatEmail]
+    ,[PatPhone]
+    ,[SurFirstName]
+    ,[SurLastName]
+    ,[SurNPI]
+    ,[Pat_Height_cm]
+    ,[Pat_Weight_kg]
+    ,[Pat_Height_ftin]
+    ,[Pat_Weight_lbs]
+    ,[Pat_BMI]
+    ,[ProcedureDate]
+    ,[AdmitDateTime]
+    ,[DischargeDateTime]
+    ,[LengthofStay]
+    ,[DSCHDISPCODE]
+    ,[PX]
+    ,[DX]
+    ,[DXLat]
+    ,[SurgicalApproachHip]
+    ,[SurgicalApproachKnee]
+    ,[SurgicalApproachOther]
+    ,[SurgicalTechniqueHip]
+    ,[SurgicalTechniqueKnee]
+    ,[OREntryTime]
+    ,[ORExitTime]
+    ,[IncisionStartTime]
+    ,[SkinClosureTime]
+    ,[TourniquetUse]
+    ,[ComputerNavigation]
+    ,[RoboticAssistedSurgery]
+    ,[RoboticSystemName]
+    ,[RoboticSoftwareVersion]
+    ,[AnesthesiaType]
+    ,[PeriarticularInjection]
+    ,[ComponentName^Mfg^Cat^Lot]
+    ,[ASA_Class]
+    ,[CoM^POA]
+    ,[Trainee]
+    ,[Substance_Use_Screening]
+    ,[Payer_Status]
+    ,[Charlson_Index]
+    ,[Rgnl_Ansth_Exemption]
+    ,[Ambulation]
+    ,[Discharge_Exclusion]
+    ,[Pat_Residence]
+    ,[Chronic_Narcotics_Use_>90]
+    ,[PatTobaccoUse]
+    ,[MBI]
+    ,[SharedDecision_ConservativeTx]
+    ,[Blood_Transfusion]
+    ,[Blood_Transfusion_Amount]
+    ,[Tranexamic_Acid_Usage]
+    ,[PT_Day_0]
+    ,[VTE_Prophylaxis]
+    ,[VTE_CV_Risk]
+    ,[Perioperative_Antibiotics]
+    ,[Pain_Management]
+    ,[Encounter_Type]
+    ,[Lab_Test_CRP]
+    ,[CRP]
+    ,[Lab_Test_ESR]
+    ,[ESR]
+    ,[Lab_Test_SynFl_CellCnt]
+    ,[SynFl_CellCnt]
+    ,[Lab_Test_SynFl_Diff]
+    ,[SynFl_Diff]
+    ,[Lab_Test_SynFl_AeroCult]
+    ,[SynFl_AeroCult]
+    ,[Lab_Test_Synfl_AnaeroCult]
+    ,[Synfl_AnaeroCult]
+    ,[Lab_Test_Tiss_AeroCult]
+    ,[Tiss_AeroCult]
+    ,[Lab_Test_Tiss_AnaeroCult]
+    ,[Tiss_AnaeroCult]
+    ,[Dx_Study_Peripros_Osteolys]
+    ,[Dx_Study_Pros_Impl_Loos]
+    ,[Pract_Spec_Infec_Dis]
+    FROM #OUT
+    ORDER BY ExportRowNum;
+END;
 
 DROP TABLE IF EXISTS #CASE, #PROCLINE, #CODING, #PAT, #RACE, #SURG, #TIMING, #TOURN,
                      #ROBOT, #ANES, #IMPLANT, #VITALS, #TRIG, #PXCAND, #SIDE, #PX, #DX,
-                     #COM, #IMPLANTSTR, #ANESTYPE, #RACECODE, #TIMES, #VITALVAL;
+                     #COM, #IMPLANTSTR, #ANESTYPE, #RACECODE, #TIMES, #VITALVAL, #OUT;
 END
 GO
