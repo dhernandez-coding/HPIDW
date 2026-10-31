@@ -10,6 +10,7 @@
 1/23/2024: Eric Silvestri: Changed from completion date to coding completion date
 1/23/2024: Eric Silvestri: Updated CTEConfidentialPatients to include 430 Service area only 
 10/16/2026: Eric Silvestri: Converted linked server queries to OPENQUERY
+10/30/2026: Diego Hernandez: Select and not export (test)
 --=============================================
 */
 
@@ -229,6 +230,51 @@ from #TempFinal f
 	left join #cteProviders attp on f.attending_prov_id = attp.prov_id
 
 
+--/* SELECT ROWS */
+--SELECT
+--    CAST(PressGaneySurgeyDesignatorEPT AS VARCHAR(8)),
+--    CAST(HospitalAreaClientID AS VARCHAR(7)),
+--    CAST(LastName AS VARCHAR(25)),
+--    CAST(MiddleName AS VARCHAR(1)),
+--    CAST(FirstName AS VARCHAR(20)),
+--    CAST(PatientStreetAddressLine1 AS VARCHAR(40)),
+--    CAST(PatientStreetAddressLine2 AS VARCHAR(40)),
+--    CAST(PatientCity AS VARCHAR(25)),
+--    CAST(PatientState AS VARCHAR(2)),
+--    CAST(PatientZIP AS VARCHAR(10)),
+--    CAST(HospitalAccountID AS VARCHAR(9)),
+--    CAST(CSN AS VARCHAR(11)),
+--    CAST(MRN AS VARCHAR(20)),
+--    CAST(PatientDOB AS VARCHAR(10)),
+--    CAST(PatientAge AS VARCHAR(3)),
+--    CAST(sex_abbr AS VARCHAR(1)),
+--    CAST(lang AS VARCHAR(50)),
+--    CAST(adm_source_name AS VARCHAR(30)),
+--    CAST(OriginPoint AS VARCHAR(20)),
+--    CAST(HospUnitLoc AS VARCHAR(20)),
+--    CAST(Bed AS VARCHAR(50)),
+--    CAST(PatientClass AS VARCHAR(50)),
+--    CAST(PatientService AS VARCHAR(50)),
+--    CAST(AdmitDate AS VARCHAR(10)),
+--    CAST(DischargeDate AS VARCHAR(10)),
+--    CAST(HARDischargeDisposition AS VARCHAR(5)),
+--    CAST(DRG AS VARCHAR(5)),
+--    CAST(ICUStayIndicator AS VARCHAR(1)),
+--    CAST(AdmittingProviderID AS VARCHAR(50)),
+--    CAST(AdmittingProviderSpeciality AS VARCHAR(50)),
+--    CAST(AdmittingProviderName AS VARCHAR(50)),
+--    CAST(AttendingProviderID AS VARCHAR(50)),
+--    CAST(AttendingProviderSpeciality AS VARCHAR(50)),
+--    CAST(AttendingProviderName AS VARCHAR(50)),
+--    CAST(PatientEmail AS VARCHAR(60)),
+--    CAST(PatientReasonforNoEmail AS VARCHAR(30)),
+--    CAST(PatientCellPhone AS VARCHAR(12)),
+--    CAST(PatientLivingStatus AS VARCHAR(1)),
+--    CAST(SurveyOptOut AS VARCHAR(1)),
+--    CAST(FreeSpace AS VARCHAR(1)),
+--    CAST(NewbornAdmission AS VARCHAR(1)),
+--    CAST(EORIndicator AS VARCHAR(1))
+--FROM ##TempED;
 
 /*=====================================================================
   Export - unchanged
@@ -277,7 +323,7 @@ DECLARE @query varchar(8000) = 'SET NOCOUNT ON;' +
 'CAST(NewbornAdmission as varchar(1)), '','',' +
 'CAST(EORIndicator as varchar(1)) FROM ##TempED'
 
-
+/* SELECT ROWS */ 
 
 select @prevAdvancedOptions = cast(value_in_use as int) from master.sys.configurations where name = 'show advanced options'
 select @prevXpCmdshell = cast(value_in_use as int) from master.sys.configurations where name = 'xp_cmdshell'

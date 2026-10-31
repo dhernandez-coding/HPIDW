@@ -243,6 +243,55 @@ from #TempFinal f
 
 
 
+
+--/* SELECT ROWS */
+--SELECT
+--    CAST(PressGaneySurgeyDesignator AS VARCHAR(8)),
+--    CAST(HospitalAreaClientID AS VARCHAR(7)),
+--    CAST(LastName AS VARCHAR(25)),
+--    CAST(MiddleInitial AS VARCHAR(1)),
+--    CAST(FirstName AS VARCHAR(20)),
+--    CAST(PatientStreetAddressLine1 AS VARCHAR(40)),
+--    CAST(PatientStreetAddressLine2 AS VARCHAR(40)),
+--    CAST(PatientCity AS VARCHAR(25)),
+--    CAST(PatientState AS VARCHAR(2)),
+--    CAST(PatientZIP AS VARCHAR(10)),
+--    CAST(HospitalAccountID AS VARCHAR(9)),
+--    CAST(CSN AS VARCHAR(11)),
+--    CAST(MRN AS VARCHAR(20)),
+--    CAST(PatientDOB AS VARCHAR(10)),
+--    CAST(PatientAge AS VARCHAR(3)),
+--    CAST(sex_abbr AS VARCHAR(1)),
+--    CAST(lang AS VARCHAR(50)),
+--    CAST(OriginPoint AS VARCHAR(20)),
+--    CAST(MedicareID AS VARCHAR(20)),
+--    CAST(PGHospUnit AS VARCHAR(50)),
+--    CAST(Bed AS VARCHAR(50)),
+--    CAST(PatientClass AS VARCHAR(50)),
+--    CAST(PatientService AS VARCHAR(50)),
+--    CAST(AdmitDate AS VARCHAR(10)),
+--    CAST(DischargeDate AS VARCHAR(10)),
+--    CAST(HARDischargeDisposition AS VARCHAR(2)),
+--    CAST(DRG AS VARCHAR(4)),
+--    CAST(ICUStayIndicator AS VARCHAR(1)),
+--    CAST(AdmittingProviderID AS VARCHAR(50)),
+--    CAST(AdmittingProviderSpeciality AS VARCHAR(50)),
+--    CAST(AdmittingProviderName AS VARCHAR(50)),
+--    CAST(AttendingProviderID AS VARCHAR(50)),
+--    CAST(AttendingProviderSpeciality AS VARCHAR(50)),
+--    CAST(AttendingProviderName AS VARCHAR(50)),
+--    CAST(EmailAddress AS VARCHAR(60)),
+--    CAST(PatientReasonforNoEmail AS VARCHAR(30)),
+--    CAST(PatientCellPhone AS VARCHAR(12)),
+--    CAST(PatientLivingStatus AS VARCHAR(1)),
+--    CAST(SurveyOptOut AS VARCHAR(1)),
+--    CAST(FreeSpace AS VARCHAR(1)),
+--    CAST(NewbornAdmission AS VARCHAR(1)),
+--    CAST(FirstEventDept AS VARCHAR(20)),
+--    CAST(AdmissionType AS VARCHAR(20)),
+--    CAST(EORIndicator AS VARCHAR(1))
+--FROM ##TempCHIP;
+
 /*=====================================================================
   Export - unchanged
   =====================================================================*/
