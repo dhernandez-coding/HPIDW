@@ -1,18 +1,67 @@
-CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED_NEW]
+/*
+================================================================================
+ REWRITE NOTES - spSelectStateDischargeReportED (read before deploying)
+================================================================================
+ Same pattern as the OP and IP rewrites: replace per-account correlated
+ linked-server subqueries with bulk OPENQUERY pulls into local temp tables,
+ scoped by a shared filter clause built once and reused (not a giant
+ account-ID list - that hit OPENQUERY's 8000-character limit on the OP proc).
 
+ This proc is structurally almost identical to the OP proc: same source
+ tables for diagnoses (HSP_ACCT_DX_LIST + clarity_edg), ecode
+ (V_CODING_ALL_DX_PX_LIST), and procedures/charges (HSP_TRANSACTIONS).
+ Differences from OP/IP that shaped this rewrite:
+   - ACCT_BASECLS_HA_C = 3 (Emergency), submission_type = 'E'.
+   - prim_payer_class has one extra branch not present in OP/IP:
+     "WHEN epm.FINANCIAL_CLASS IS NULL THEN 6" - kept.
+   - Self-pay exclusion list has 6 entries (matches OP, not IP's 7 -
+     IP adds 'INTEGRIS MIAMI HOSPICE').
+   - drg (clarity_drg) is joined but the 'drg' output field is commented
+     out in the original - genuinely dead here, unlike IP where it's
+     used. Dropped.
+   - BIRTH_WEIGHT is likewise joined/available but commented out in the
+     original - not pulled.
+   - ZC_MC_ADM_SOURCE (zcadmin), PAT_ENC_HSP (enc), CLARITY_DEP (dep),
+     and ZC_DX_POA (pos) are all joined but never referenced in any live
+     output column - dropped as dead, same category of finding as the
+     OP/IP rewrites.
+   - princ_cpt_proc has a few extra null/blank guards compared to OP's
+     version (Trim(...) = '' checks in addition to IS NULL) - preserved
+     exactly.
+   - Same two latent type-mixing bugs as OP/IP, fixed the same way:
+     'point_origin' and 'pat_disch_status' mix string literals with a
+     raw int column across CASE branches, which silently resolves the
+     whole expression to int by SQL Server's type precedence rules.
+     Explicit CONVERT(varchar(10), ...) added to the else branches.
+   - Same HSP_ACCOUNT_ID / PAT_ID legacy alpha-prefix issue as the other
+     two procs: TRY_CAST guard on the >= 600000000 filter, PAT_ID
+     declared varchar rather than int.
+   - 'pat_gender', 'pat_race', and 'pat_marital_stat' have no ELSE
+     branch in the original - an unmapped or NULL source code silently
+     produces NULL rather than a fallback value. Left as-is, flagging
+     in case that's not intentional (same note as IP).
+
+ Verify before running against production:
+   - Column types in the CREATE TABLE statements are reasonable guesses;
+     check against the real Clarity DDL.
+================================================================================
+*/
+
+CREATE PROCEDURE [rpt].[spSelectStateDischargeReportED]
 
  @startdate datetime = null,
  @enddate datetime = null,
  @Location int = null
- --43004001 --HPI CHN
- 	--DECLARE @Location int = 43005005 --HPI CHS
-	--DECLARE @Location int = 43006001 --HPI NWSH
+	--43004001 --HPI CHN
+ 	--43005005 --HPI CHS
+	--43006001 --HPI NWSH
 
-AS BEGIN
+as begin
 
 SET NOCOUNT ON;
 
---DECLARE @startdate datetime = '2026-01-01'
+
+--DECLARE @startdate datetime = '2026-08-01'
 --DECLARE @enddate datetime = '2026-08-31'
 SET @startdate = IsNull(@startdate, DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)), 1));
 SET @enddate   = IsNull(@enddate,   DATEFROMPARTS(YEAR(GETDATE()), Month(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 1, 0)) + 1, 1));
@@ -253,13 +302,19 @@ EXEC sp_executesql @sql;
 
 /* ============================================================
    4b. #TEMPProcedures
-       Same split as OP: procedure codes pulled independently from
-       fact.VisitProcedures, keyed by VisitProcedureSequence (a real,
-       deterministic order), with the performing provider's NPI
-       resolved via dim.Providers rather than defaulting every
-       procedure to the account's AttendingNPI.
-       Filtered to VisitProcedureCodeType = 'CPT' - same assumption
-       flagged on the OP proc, confirm it still holds here.
+       ED CPT codes are the charged E/M and procedure CPTs on the
+       revenue code 450 (ED) transactions - exactly what the original
+       ED query used (HSP_TRANSACTIONS, UB_REV_CODE_ID = 450,
+       CPT_CODE <> 'EDNOCHG').
+       These are NOT in fact.VisitProcedures: the loader only brings
+       in Charge CPT for revenue codes 0360/0361, so an earlier
+       version of this proc that read VisitProcedures returned no
+       procedure codes for ED at all. Pulled from Clarity again here.
+       Sequence is deterministic: earliest service date, then CPT
+       code (the original picked an arbitrary CPT). Sequence 1 =
+       princ_cpt_proc; the rest feed oth_cpt_proc.
+       Provider is the account's attending NPI, same as the
+       original (ser2.NPI) - applied locally from #TEMPAccounts.
    ============================================================ */
 CREATE TABLE #TEMPProcedures (
 	HSP_ACCOUNT_ID          bigint NOT NULL,
@@ -269,37 +324,36 @@ CREATE TABLE #TEMPProcedures (
 	PX_DATE                 datetime NULL
 );
 
-SET @sql = N'
-INSERT INTO #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence, CPT_CODE, ProviderNPI, PX_DATE)
+SET @innerSql = N'
 select
-	SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as HSP_ACCOUNT_ID
-	,p.VisitProcedureSequence
-	,p.VisitProcedureCode
-	,prov.ProviderNPI
-	,p.VisitProcedureDate
-from fact.VisitProcedures p
-	join fact.Accounts a on a.AccountID = p.VisitProcedureAccountID
-						 and a.AccountDataSourceID = 5
-	left join dim.Providers prov on prov.ProviderID = p.VisitProcedureProviderID
-	left join dim.locations l on l.LocationID = a.AccountLocationID
-						 and l.LocationDataSourceID = 5
-where p.VisitProcedureDataSourceID = 5
-	and p.VisitProcedureCodeType = ''CPT''
-	and a.AccountDateOfDischarge >= ''' + @startdateLit + N'''
-	and a.AccountDateOfDischarge <= ''' + @enddateLit + N'''
-	and a.AccountCodingStatus = ''Completed'' 
-	and a.AccountClass = ''Emergency'' 
-	and TRY_CAST(SUBSTRING(a.AccountID, CHARINDEX(''~'', a.AccountID) + 1, LEN(a.AccountID)) as bigint) >= 600000000
-	and a.AccountTotalCharges > 0
-	and a.AccountPatientID is not null
-	and l.LocationSourceID =''' + @locationLit + N'''
-	and (a.AccountFinancialClassID = ''5~4'' 
-		 or exists (select * from dim.PayerPlans pp
-					 where pp.PayerPlanName not in (''OKLAHOMA CITY POLICE DEPARTMENT'',''TURN KEY HEALTH CLINIC'',''SHARED SERVICE'',''SANE/YWCA'',''VALIR HOSPICE'',''WILLOW CREST HOSPITAL'')
-					   and pp.PayerPlanDataSourceID = 5
-					   and a.AccountPrimaryPayerPlanID = pp.PayerPlanID))
+	x.HSP_ACCOUNT_ID
+	,ROW_NUMBER() OVER (PARTITION BY x.HSP_ACCOUNT_ID ORDER BY x.SERVICE_DATE, x.CPT_CODE) as VisitProcedureSequence
+	,x.CPT_CODE
+	,x.SERVICE_DATE
+from (
+	select t.HSP_ACCOUNT_ID, t.CPT_CODE, t.SERVICE_DATE
+	from [CLARITY].[ORGFILTER].[HSP_TRANSACTIONS] t
+		join [CLARITY].[ORGFILTER].HSP_ACCOUNT hsp on hsp.HSP_ACCOUNT_ID = t.HSP_ACCOUNT_ID
+	where t.UB_REV_CODE_ID = 450
+		and t.CPT_CODE is not null
+		and LTRIM(RTRIM(t.CPT_CODE)) <> ''''
+		and t.CPT_CODE <> ''EDNOCHG''
+		and ' + @accountFilterSql + N'
+	group by t.HSP_ACCOUNT_ID, t.CPT_CODE, t.SERVICE_DATE
+) x
+';
+
+SET @sql = N'
+INSERT INTO #TEMPProcedures (HSP_ACCOUNT_ID, VisitProcedureSequence, CPT_CODE, PX_DATE)
+SELECT HSP_ACCOUNT_ID, VisitProcedureSequence, CPT_CODE, SERVICE_DATE
+FROM OPENQUERY([CLARITYRDBMS.CORP.INTEGRIS-HEALTH.COM], ''' + REPLACE(@innerSql, '''', '''''') + N''')
 ';
 EXEC sp_executesql @sql;
+
+UPDATE pr
+SET pr.ProviderNPI = a.AttendingNPI
+FROM #TEMPProcedures pr
+	JOIN #TEMPAccounts a ON a.HSP_ACCOUNT_ID = pr.HSP_ACCOUNT_ID;
 
 CREATE INDEX IX_TEMPDx_AcctID           ON #TEMPDx (HSP_ACCOUNT_ID, LINE);
 CREATE INDEX IX_TEMPEcode_AcctID        ON #TEMPEcode (HSP_ACCOUNT_ID);
@@ -484,18 +538,18 @@ DECLARE @Dt XML=
 					 end  as 'admit_type',
 
 				 case CONVERT(varchar,acct.PATIENT_STATUS_C)
-				  when 42 then '20'
-				  when 41 then '20'
-				  when 40 then '20'
-				  when 100 then '50'
-				  when 10 then '04'
-				  when 09 then '02'
-				  when 30 then '02'
-				  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
+					  when 42 then '20'
+					  when 41 then '20'
+					  when 40 then '20'
+					  when 100 then '50'
+					  when 10 then '04'
+					  when 09 then '02'
+					  when 30 then '02'
+					  else case when LEN(CONVERT(varchar(10), acct.PATIENT_STATUS_C)) = 1
 								then '0' + CONVERT(varchar(10), acct.PATIENT_STATUS_C)
 								else CONVERT(varchar(10), acct.PATIENT_STATUS_C)
 						   end
-					end as 'pat_disch_status',
+						end as 'pat_disch_status',
 
 				 ( Select top (6)
 					CONCAT(LTRIM((RTRIM(SUBSTRING(ecode.ref_bill_code, CHARINDEX('.',  ecode.ref_bill_code)-3, 3))))
@@ -597,7 +651,29 @@ DECLARE @Dt XML=
 					 when procs.ProviderNPI is null then 'OTHOOO'
 					 else procs.ProviderNPI
 					end as 'princ_cpt_proc_phys_id',
-					convert(date,procs.PX_DATE,100) as 'princ_cpt_proc_date'
+					convert(date,procs.PX_DATE,100) as 'princ_cpt_proc_date',
+
+						(
+							select top (17)
+								proc1.CPT_CODE as 'oth_cpt_proc_code',
+								case
+								 when proc1.ProviderNPI = '' then 'OTHOOO'
+								 when proc1.ProviderNPI is null then 'OTHOOO'
+								 else proc1.ProviderNPI
+								end as 'oth_cpt_proc_phys_id',
+								convert(date,proc1.PX_DATE,100) as 'oth_cpt_proc_date'
+
+							from #TEMPProcedures proc1
+
+							where acct.HSP_ACCOUNT_ID = proc1.HSP_ACCOUNT_ID
+								and proc1.VisitProcedureSequence <> 1
+								and proc1.CPT_CODE is not null
+								and Trim(proc1.CPT_CODE) <> ''
+
+							order by proc1.VisitProcedureSequence
+
+							for xml Path('proc'), TYPE
+						)
 
 				from #TEMPProcedures procs
 
@@ -665,5 +741,5 @@ IF OBJECT_ID('tempdb..#TEMPEcode')        IS NOT NULL DROP TABLE #TEMPEcode;
 IF OBJECT_ID('tempdb..#TEMPTransactions') IS NOT NULL DROP TABLE #TEMPTransactions;
 IF OBJECT_ID('tempdb..#TEMPProcedures')   IS NOT NULL DROP TABLE #TEMPProcedures;
 
-END
+end
 GO
